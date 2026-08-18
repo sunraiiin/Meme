@@ -3643,16 +3643,6 @@ body {
   background: rgba(255, 255, 255, 0.2);
 }
 
-/* 对话分享按钮（对话区右上角悬浮） */
-.chat-share-btn {
-  position: absolute;
-  top: 12px;
-  right: 16px;
-  z-index: 20;
-  border-radius: 999px;
-  box-shadow: 0 4px 14px -6px rgba(16, 24, 40, 0.25);
-}
-
 /* 分享公开查看页 */
 .share-loading {
   height: 100vh;
@@ -3700,85 +3690,6 @@ body {
 .share-body {
   padding: 24px;
 }
-.share-msg {
-  display: flex;
-  align-items: flex-start;
-  gap: 10px;
-  margin-bottom: 20px;
-}
-.share-msg-user {
-  flex-direction: row-reverse;
-}
-.share-avatar {
-  width: 34px;
-  height: 34px;
-  border-radius: 50%;
-  flex-shrink: 0;
-  object-fit: cover;
-}
-.share-avatar-user {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: linear-gradient(135deg, #155eef, #2f7bff);
-  color: #fff;
-  font-size: 13px;
-  font-weight: 600;
-}
-.share-avatar-ai {
-  border: 1px solid #eef0f4;
-  background: #fff;
-}
-.share-msg-user .share-bubble {
-  background: #eef4ff;
-  color: #1d2129;
-}
-.share-msg-ai .share-bubble {
-  background: #f7f8fa;
-  color: #1d2129;
-}
-.share-bubble {
-  display: inline-block;
-  max-width: calc(100% - 44px);
-  padding: 12px 16px;
-  border-radius: 12px;
-  font-size: 15px;
-  line-height: 1.75;
-}
-.share-bubble-wrap {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  min-width: 0;
-  max-width: calc(100% - 44px);
-  align-items: flex-start;
-}
-.share-msg-user .share-bubble-wrap {
-  align-items: flex-end;
-}
-.share-bubble-wrap .share-bubble {
-  max-width: 100%;
-  width: fit-content;
-}
-.share-sender {
-  font-size: 12.5px;
-  color: #667085;
-  font-weight: 600;
-  padding-left: 2px;
-}
-.share-images {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin-bottom: 8px;
-}
-.share-image {
-  max-width: 220px;
-  max-height: 220px;
-  border-radius: 10px;
-  object-fit: cover;
-  border: 1px solid #eef0f4;
-}
 .share-footer {
   text-align: center;
   padding: 16px;
@@ -3789,49 +3700,6 @@ body {
 .share-footer a {
   color: #155eef;
   cursor: pointer;
-}
-@media (max-width: 768px) {
-  .share-bubble {
-    max-width: 100%;
-  }
-}
-
-/* 我的分享列表 */
-.share-list {
-  max-height: 260px;
-  overflow-y: auto;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-.share-list-item {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-  padding: 10px 12px;
-  border: 1px solid #eceef2;
-  border-radius: 10px;
-}
-.share-list-info {
-  min-width: 0;
-  flex: 1;
-}
-.share-list-title {
-  font-size: 14px;
-  color: #1d2129;
-  font-weight: 500;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.share-list-meta {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-top: 4px;
-  font-size: 12px;
-  color: #98a2b3;
 }
 
 /* ── 群聊页 ── */
@@ -5099,36 +4967,6 @@ body {
     word-break: break-all;
   }
 }
-
-/* 分享对话弹窗：表单字段标签（标题/有效期统一样式） */
-.share-field-label {
-  font-size: 13px;
-  color: #344054;
-  font-weight: 500;
-  margin-bottom: 6px;
-}
-
-/* 手机端：分享弹窗触控与排版优化 */
-@media (max-width: 768px) {
-  /* 「我的分享」列表更高一点，单屏能多看几条 */
-  .share-list {
-    max-height: 46vh;
-  }
-  /* 列表项内边距加大，复制/删除按钮做成更大的触控目标 */
-  .share-list-item {
-    padding: 12px;
-  }
-  .share-list-item .ant-btn {
-    width: 36px;
-    height: 36px;
-  }
-  /* 标题/有效期输入控件加高，手机更好点 */
-  .ant-modal .share-field-label + .ant-input,
-  .ant-modal .share-field-label + .ant-select .ant-select-selector {
-    min-height: 40px;
-  }
-}
-
 
 /* ── 深度研究页 ── */
 .research-caret {
