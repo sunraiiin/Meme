@@ -270,7 +270,7 @@ uv run alembic upgrade head                          # 应用
 
 - `research_reports`(深度研究报告,迁移 `979c6e3c897f`)+ `agent_tasks`(定时任务,迁移 `e004fbfb8ac6`)。
 - `report_shares`(报告公开分享,迁移 `9d2abf6b960b`);`users` 加 `briefing_seen_at`(任务中心未读红点,迁移 `45e5059b4825`)。
-- `notify_channels`(消息推送渠道:Server酱 / 企微 / 钉钉 / webhook,target 字段 Fernet 加密)+ `agent_tasks.notify_enabled`(迁移 `2628f0e24602`)。
+- `notify_channels`(消息推送渠道:Server酱 / 企微 / 钉钉 / webhook,target 字段 Fernet 加密)+ `agent_tasks.notify_enabled`(迁移 `2628f0e24602`)。当前定时任务已不再依赖该字段发送通知，字段仅作为旧客户端兼容数据保留。
 - `agent_configs.human_mode`(真人对话模式全局开关,迁移 `bf7ad4190462`)。
 
 ### v0.0.5 新增表 / 字段
