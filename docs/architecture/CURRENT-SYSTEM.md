@@ -10,7 +10,7 @@
 
 ## 1. 系统定位
 
-当前代码是一个多用户个人 AI 知识库与记忆助手，包含知识库 RAG、个人记忆图谱、LLM Agent、深度研究、多 Agent 群聊、定时任务、情绪音乐、评测与执行追踪等能力。
+当前代码是一个多用户个人 AI 知识库与记忆助手，包含知识库 RAG、个人记忆图谱、LLM Agent、深度研究、多 Agent 群聊、定时任务、评测与执行追踪等能力。情绪和音乐的前端体验已退役，后端接口、任务和数据暂作为兼容层保留。
 
 它采用前后端分离的模块化单体结构，异步重任务通过 Celery 执行，业务数据和检索数据分布在四类存储中。
 
@@ -90,8 +90,8 @@ controller -> service -> repository -> model / database
 | 多 Agent 群聊 | `GroupChatPage`、`JoinGroupPage` | `group_chat_*`、`core/agent/group_chat` | PostgreSQL、Redis 事件、LLM、人格、工具 | 分享邀请、真人模式 |
 | 定时 Agent 任务 | `AgentTaskPage` | `agent_task_*`、`tasks/agent_task`、`tasks/beat` | PostgreSQL、Redis/Celery、研究引擎 | 通知、研究、首页简报 |
 | 通知 | `NotifyChannelPage` | `notify_*`、`core/notify` | PostgreSQL、Server 酱/企微/钉钉/Webhook | 定时任务结果推送 |
-| 情绪系统 | 首页和统计视图 | `emotion_*`、`core/emotion`、`tasks/emotion` | PostgreSQL、Celery、LLM | 音乐推荐、每日回顾、对话后台任务 |
-| 音乐 | `MusicLibraryPage`、全局播放器 | `music_*`、`core/music`、`tasks/music` | PostgreSQL、文件存储、LLM、咪咕接口 | 情绪推荐、播放历史 |
+| 情绪系统（后端兼容层） | 无前端入口 | `emotion_*`、`core/emotion`、`tasks/emotion` | PostgreSQL、Celery、LLM | 音乐推荐、每日回顾、对话后台任务 |
+| 音乐（后端兼容层） | 无前端入口 | `music_*`、`core/music`、`tasks/music` | PostgreSQL、文件存储、LLM、咪咕接口 | 情绪推荐、播放历史 |
 | 搜索、标签、收藏 | `SearchPage`、`FavoritesPage` | `search_*`、`tag_*`、`favorite_*` | PostgreSQL、ES、Neo4j | 导航和内容管理 |
 | 首页与每日回顾 | `HomePage` | `dashboard_*`、`daily_review_service`、`tasks/beat` | PostgreSQL、Neo4j、LLM、Celery | 记忆、情绪、定时任务 |
 | 分享与导出 | `SharePage`、`ReportSharePage` | `conversation_share_*`、`report_share_*`、`core/export` | PostgreSQL、文件存储 | 对话、研究报告 |
@@ -165,7 +165,7 @@ L3 Agent 编排
 
 L4 扩展体验
    research / verifier / group chat / scheduled tasks / notify
-   emotion / music / sharing / dashboard / favorites
+   emotion/music backend compatibility / sharing / dashboard / favorites
 ```
 
 删除或替换模块时，应从 L4 向下检查依赖，不能直接移除 L0-L2 公共能力。
