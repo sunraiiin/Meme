@@ -72,6 +72,10 @@ docker compose up -d --build
 docker compose ps
 ```
 
+基础 Compose 会把 `web/nginx.local.conf` 挂载为本地 HTTP 配置，因此访问
+`http://localhost:5173` 不需要生产证书。生产环境叠加
+`docker-compose.prod.yml` 时会改用 `web/nginx.conf` 和人工上传的证书。
+
 首次构建 Elasticsearch IK 镜像和 Python 依赖需要较长时间。所有服务启动后验证：
 
 ```powershell
