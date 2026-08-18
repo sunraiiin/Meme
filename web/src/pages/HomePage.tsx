@@ -1,12 +1,11 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Button, Card, Col, Modal, Row, Tag, Tooltip } from 'antd'
+import { Button, Card, Col, Modal, Row, Tag } from 'antd'
 import {
   ArrowRightOutlined,
   BookOutlined,
   BulbOutlined,
   CheckCircleFilled,
   CommentOutlined,
-  CustomerServiceOutlined,
   DeploymentUnitOutlined,
   ExperimentOutlined,
   HddOutlined,
@@ -21,7 +20,6 @@ import {
   type DailyReview,
   type OverviewData,
 } from '@/api/dashboard'
-import { emotionApi, type EmotionProfile } from '@/api/emotion'
 import { memoryApi, type Insight } from '@/api/memories'
 import { researchApi, type ReportBrief } from '@/api/research'
 import { modelApi, type ModelConfigItem } from '@/api/models'
@@ -46,10 +44,8 @@ export default function HomePage() {
   const [models, setModels] = useState<ModelConfigItem[] | null>(null)
   const [welcomeOpen, setWelcomeOpen] = useState(false)
   // V0.0.5 仪表盘补三块"有意义"的卡:
-  // - 当前情绪画像(感知层面)
   // - AI 眼中的你(洞察,记忆层面)
   // - 最近一次研究(Agent 替你干活的痕迹)
-  const [emotion, setEmotion] = useState<EmotionProfile | null>(null)
   const [insights, setInsights] = useState<Insight[]>([])
   const [recentReport, setRecentReport] = useState<ReportBrief | null>(null)
 
@@ -91,13 +87,7 @@ export default function HomePage() {
         .then(({ data }) => setModels(data))
         .catch(() => setModels([]))
       fetchReview()
-      // 情绪 / 洞察 / 最近研究 —— 失败一律降级为空,不影响其他渲染
-      emotionApi
-        .current()
-        .then(({ data }) => {
-          if (!cancelled) setEmotion(data)
-        })
-        .catch(() => {})
+      // 洞察 / 最近研究 —— 失败一律降级为空,不影响其他渲染
       memoryApi
         .insights()
         .then(({ data }) => {
@@ -176,7 +166,6 @@ export default function HomePage() {
     { icon: <ExperimentOutlined />, label: '深度研究', desc: '一句话产出带来源报告', to: '/research', color: '#EB2F96' },
     { icon: <DeploymentUnitOutlined />, label: '图谱可视化', desc: '关系网络与时间线', to: '/graph', color: '#FF8A34' },
     { icon: <ThunderboltOutlined />, label: '执行轨迹', desc: 'Loop 健康度与成本', to: '/traces', color: '#FAAD14' },
-    { icon: <CustomerServiceOutlined />, label: '情绪音乐', desc: '随心情推荐歌单', to: '/music', color: '#13C2C2' },
   ]
 
   const allReady = hasChat && hasEmbedding
@@ -346,58 +335,10 @@ export default function HomePage() {
     </Card>
   )
 
-  // 😊 今日心情小药丸 —— 合并到「今日回顾」卡右上角 extra,不单独占行。
-  const moodEmoji = (() => {
-    if (!emotion) return '🙂'
-    if (emotion.avg_valence > 0.3) return '😊'
-    if (emotion.avg_valence > 0) return '🙂'
-    if (emotion.avg_valence > -0.3) return '😐'
-    return '😔'
-  })()
-  const moodColor = (() => {
-    if (!emotion) return '#155EEF'
-    if (emotion.health_index >= 60) return '#369F21'
-    if (emotion.health_index >= 40) return '#FF8A34'
-    return '#FF5D34'
-  })()
-  const moodChip = emotion && emotion.sample_count > 0 && (
-    <Tooltip title={`基于近期 ${emotion.sample_count} 条对话感知 · 点击查看记忆画像`}>
-      <span
-        onClick={() => navigate('/memory')}
-        style={{
-          display: 'inline-flex',
-          alignItems: 'center',
-          gap: 6,
-          padding: '4px 12px',
-          background: `${moodColor}14`,
-          border: `1px solid ${moodColor}33`,
-          borderRadius: 999,
-          cursor: 'pointer',
-          fontSize: 13,
-          color: '#1D2129',
-          transition: 'transform 0.15s',
-          userSelect: 'none',
-        }}
-        onMouseEnter={(e) => {
-          e.currentTarget.style.transform = 'translateY(-1px)'
-        }}
-        onMouseLeave={(e) => {
-          e.currentTarget.style.transform = 'translateY(0)'
-        }}
-      >
-        <span style={{ fontSize: 16 }}>{moodEmoji}</span>
-        <span style={{ color: '#98A2B3' }}>今日心情</span>
-        <span style={{ fontWeight: 600 }}>{emotion.dominant_emotion || '中性'}</span>
-        <span style={{ color: moodColor, fontWeight: 600 }}>{emotion.health_index}%</span>
-      </span>
-    </Tooltip>
-  )
-
   const reviewCard = (
     <Card
       title="📅 今日回顾"
       style={{ marginBottom: 22, borderRadius: 16 }}
-      extra={moodChip || undefined}
     >
       <p style={{ margin: 0, color: '#475467', lineHeight: 1.8, whiteSpace: 'pre-wrap' }}>
         {review?.content ?? '加载中…'}
@@ -421,7 +362,6 @@ export default function HomePage() {
     </Card>
   )
 
-  // � 今日心情已合并到今日回顾卡 extra(见上),此处保留 AI 洞察分隔
   const topInsights = useMemo(
     () =>
       [...insights]

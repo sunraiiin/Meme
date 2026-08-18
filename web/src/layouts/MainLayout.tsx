@@ -19,7 +19,6 @@ import {
   RobotOutlined,
   SearchOutlined,
   SettingOutlined,
-  StarOutlined,
   TeamOutlined,
   ThunderboltOutlined,
   ToolOutlined,
@@ -76,7 +75,6 @@ const menuItems: ProductMenuGroup[] = [
       { key: '/search', icon: <SearchOutlined />, label: '搜索', feature: 'search' },
       { key: '/images', icon: <PictureOutlined />, label: '图片库', feature: 'imageLibrary' },
       { key: '/music', icon: <CustomerServiceOutlined />, label: '音乐', feature: 'music' },
-      { key: '/favorites', icon: <StarOutlined />, label: '收藏夹', feature: 'favorites' },
     ],
   },
   {

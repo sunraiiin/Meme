@@ -30,8 +30,6 @@ import {
   PictureOutlined,
   PlusOutlined,
   SendOutlined,
-  StarFilled,
-  StarOutlined,
   TeamOutlined,
   ToolOutlined,
   UsergroupAddOutlined,
@@ -54,7 +52,6 @@ import VoiceInputButton from '@/components/VoiceInputButton'
 import { useAuthStore } from '@/stores/authStore'
 import { useGroupHeaderStore } from '@/stores/groupHeaderStore'
 import { copyText } from '@/utils/clipboard'
-import { favoriteApi } from '@/api/favorites'
 import { resolveToolMeta, formatMsgTime, splitBubbles, hasBubbleSep } from '@/pages/chat/types'
 
 // 群聊页内的消息模型（含流式态 + 发送者 + 工具调用标记）
@@ -272,8 +269,6 @@ export default function GroupChatPage() {
   const subRef = useRef<AbortController | null>(null)
   // 工具明细展开的消息 id 集合（默认折叠成「调用了 N 次工具」汇总条）
   const [expandedTools, setExpandedTools] = useState<Set<string>>(() => new Set())
-  // 本地收藏态：msgId -> favoriteId（收藏成功后金星，可取消）
-  const [favIds, setFavIds] = useState<Record<string, string>>({})
 
   const toggleTools = (id: string) =>
     setExpandedTools((prev) => {
@@ -289,31 +284,6 @@ export default function GroupChatPage() {
     else antdMessage.error('复制失败')
   }
 
-  const onFavMsg = async (m: GroupUiMessage) => {
-    const existing = favIds[m.id]
-    try {
-      if (existing) {
-        await favoriteApi.remove(existing)
-        setFavIds((prev) => {
-          const next = { ...prev }
-          delete next[m.id]
-          return next
-        })
-        antdMessage.success('已取消收藏')
-      } else {
-        const { data } = await favoriteApi.add('message', m.id, {
-          title: `${m.senderName || 'AI'} 的发言`,
-          summary: m.content.slice(0, 120),
-          conversation_id: activeId ?? undefined,
-          is_group: true,
-        })
-        setFavIds((prev) => ({ ...prev, [m.id]: data.id }))
-        antdMessage.success('已收藏')
-      }
-    } catch (e) {
-      antdMessage.error((e as Error).message)
-    }
-  }
   // 当前正在流式输出的 AI 气泡临时 id（speaker_start 设、speaker_end 清）
   const streamingRef = useRef<string | null>(null)
   // 已渲染过的真人消息 id 集合（say 乐观插入与 SSE 回声去重）
@@ -1241,21 +1211,6 @@ export default function GroupChatPage() {
                               style={{ color: '#667085', fontSize: 12 }}
                             >
                               复制
-                            </Button>
-                            <Button
-                              size="small"
-                              type="text"
-                              icon={
-                                favIds[m.id] ? (
-                                  <StarFilled style={{ color: '#FAAD14' }} />
-                                ) : (
-                                  <StarOutlined />
-                                )
-                              }
-                              onClick={() => onFavMsg(m)}
-                              style={{ color: favIds[m.id] ? '#FAAD14' : '#667085', fontSize: 12 }}
-                            >
-                              {favIds[m.id] ? '已收藏' : '收藏'}
                             </Button>
                           </>
                         )}

@@ -36,7 +36,6 @@ import {
   type ToolCall,
   type ToolRunStatus,
 } from '@/api/chat'
-import { favoriteApi } from '@/api/favorites'
 
 /** 过滤 noop/无效 trace（全 0 UUID 来自 tracing 关闭或采样跳过） */
 function validTraceId(id?: string | null): string | undefined {
@@ -74,7 +73,6 @@ export default function ChatPage() {
   >([])
   const [dragOver, setDragOver] = useState(false)
   const dragCounter = useRef(0)
-  const [highlightId, setHighlightId] = useState<string | null>(null)
   // 对话头像上下文（角色头像 + 用户头像 + 总开关）
   const [avatars, setAvatars] = useState<ChatAvatars>({ show: false })
   // 移动端：会话列表收进抽屉，对话区占满
@@ -108,7 +106,6 @@ export default function ChatPage() {
     }
   }, [])
   const scrollRef = useRef<HTMLDivElement>(null)
-  const msgRefs = useRef<Record<string, HTMLDivElement | null>>({})
   const inputRef = useRef<{ focus: () => void } | null>(null)
   const pendingGreetingRef = useRef<string | null>(null)
   const groupsInited = useRef(false)
@@ -231,13 +228,13 @@ export default function ChatPage() {
   }, [])
 
   // 重进对话页：默认打开「上次的对话」（最近一条），而不是新开空白会话。
-  // 有深链(?conversation/greeting/message)或已选中会话时不抢。仅在首次会话到位时执行一次。
+  // 有深链(?conversation/greeting)或已选中会话时不抢。仅在首次会话到位时执行一次。
   const autoOpenedRef = useRef(false)
   useEffect(() => {
     if (autoOpenedRef.current || conversations.length === 0) return
     autoOpenedRef.current = true
     if (activeId) return
-    if (params.get('conversation') || params.get('greeting') || params.get('message')) return
+    if (params.get('conversation') || params.get('greeting')) return
     openConversation(conversations[0].id)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [conversations])
@@ -282,13 +279,12 @@ export default function ChatPage() {
     })
   }, [])
 
-  // 收藏深链：?conversation=&message= 打开会话并定位消息
+  // 对话深链与今日回顾主动开场。
   useEffect(() => {
     const conv = params.get('conversation')
-    const msg = params.get('message')
     const greeting = params.get('greeting')
     if (conv) {
-      openConversation(conv, msg ?? undefined)
+      openConversation(conv)
       setParams({}, { replace: true })
     } else if (greeting) {
       // 从今日回顾「聊聊」跳来：AI 主动开场，把关怀句作为 AI 第一句话显示，输入框留空待用户回应。
@@ -309,26 +305,18 @@ export default function ChatPage() {
   }, [])
 
   useEffect(() => {
-    if (highlightId) return // 深链定位时不强制滚到底
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: 'smooth' })
-  }, [messages, highlightId])
+  }, [messages])
 
-  const openConversation = async (id: string, focusMessageId?: string) => {
+  const openConversation = async (id: string) => {
     setActiveId(id)
     setConvDrawerOpen(false)
     // 切会话：断开上一个会话的续传订阅
     resumeAbortRef.current?.abort()
     resumeAbortRef.current = null
     try {
-      const [{ data }, favResp] = await Promise.all([
-        chatApi.listMessages(id),
-        favoriteApi.list('message'),
-      ])
-      const favByMsg: Record<string, string> = {}
-      favResp.data.forEach((f) => {
-        favByMsg[f.target_id] = f.id
-      })
-          setMessages(
+      const { data } = await chatApi.listMessages(id)
+      setMessages(
         data.map((m: ChatMessage) => ({
           id: m.id,
           role: m.role as 'user' | 'assistant',
@@ -340,29 +328,14 @@ export default function ChatPage() {
           attachments: m.meta_data?.attachments?.map((a) => ({
             file_name: a.file_name,
           })),
-          conversationId: id,
-          favId: favByMsg[m.id] ?? null,
           feedback: m.feedback ?? null,
           createdAt: m.created_at,
           fromHistory: true,
         })),
       )
-      if (focusMessageId) {
-        setHighlightId(focusMessageId)
-        // 等渲染后滚动定位
-        setTimeout(() => {
-          msgRefs.current[focusMessageId]?.scrollIntoView({
-            behavior: 'smooth',
-            block: 'center',
-          })
-          setTimeout(() => setHighlightId(null), 2500)
-        }, 200)
-      }
       // 若该会话正有「后台生成」在进行（上次切走/刷新时未结束），订阅续传补全
-      if (!focusMessageId) {
-        const lastRole = data.length ? data[data.length - 1].role : undefined
-        subscribeResume(id, lastRole === 'user')
-      }
+      const lastRole = data.length ? data[data.length - 1].role : undefined
+      subscribeResume(id, lastRole === 'user')
     } catch (e) {
       antdMessage.error((e as Error).message)
     }
@@ -389,7 +362,6 @@ export default function ChatPage() {
           toolCalls: [],
           toolRuns: [],
           streaming: true,
-          conversationId: convId,
         },
       ])
     }
@@ -444,7 +416,6 @@ export default function ChatPage() {
                     ...m,
                     streaming: false,
                     id: d.message_id ?? m.id,
-                    conversationId: d.conversation_id,
                     createdAt: m.createdAt ?? new Date().toISOString(),
                     traceId: validTraceId(d.trace_id) ?? m.traceId,
                   }
@@ -478,7 +449,6 @@ export default function ChatPage() {
                               citations: last.meta_data?.citations,
                               toolCalls: last.meta_data?.tool_calls,
                               traceId: validTraceId(last.meta_data?.trace_id),
-                              conversationId: convId,
                               feedback: last.feedback ?? null,
                               createdAt: last.created_at,
                             },
@@ -718,13 +688,6 @@ export default function ChatPage() {
           convId = d.conversation_id
           pendingGreetingRef.current = null // 开场白只在首轮带一次
           if (!activeId) setActiveId(d.conversation_id)
-          setMessages((prev) =>
-            prev.map((m) =>
-              m.id === aiMsg.id || m.id === userMsg.id
-                ? { ...m, conversationId: d.conversation_id }
-                : m,
-            ),
-          )
         },
         onToken: (t) => {
           setMessages((prev) =>
@@ -757,7 +720,6 @@ export default function ChatPage() {
                     ...m,
                     streaming: false,
                     id: d.message_id ?? m.id,
-                    conversationId: d.conversation_id,
                     createdAt: m.createdAt ?? new Date().toISOString(),
                     traceId: validTraceId(d.trace_id) ?? m.traceId,
                   }
@@ -944,17 +906,7 @@ export default function ChatPage() {
           ) : (
             <div className="chat-fluid" style={{ padding: '0 24px' }}>
               {messages.map((m) => (
-                <div
-                  key={m.id}
-                  ref={(el) => {
-                    msgRefs.current[m.id] = el
-                  }}
-                  style={{
-                    borderRadius: 12,
-                    transition: 'background 0.4s',
-                    background: highlightId === m.id ? '#FFF7E6' : 'transparent',
-                  }}
-                >
+                <div key={m.id}>
                   <MessageItem msg={m} onRegenerate={onRegenerate} avatars={avatars} />
                 </div>
               ))}
