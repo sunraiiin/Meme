@@ -123,7 +123,7 @@ function buildChatNarrative(trace: TraceDetail): { phases: Phase[]; insights: In
     if (tools.length > 0) {
       const toolNames = [...new Set(tools.map(toolName))]
       const dur = group.reduce((s, x) => s + durMs(x), 0)
-      let desc = ''
+      let desc: string
       const internal: string[] = []
       if (groupEmbeds.length > 0) internal.push(`${groupEmbeds.length} 次向量化`)
       if (groupReranks.length > 0) internal.push(`${groupReranks.length} 次重排`)
