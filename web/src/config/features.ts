@@ -28,7 +28,6 @@ export const productFeatures = {
   complexTags: { lifecycle: 'advanced', enabled: true, showInNavigation: false },
   reportExport: { lifecycle: 'advanced', enabled: true, showInNavigation: false },
 
-  music: { lifecycle: 'retiring', enabled: false, showInNavigation: false },
   groupChat: { lifecycle: 'retiring', enabled: false, showInNavigation: false },
   notifications: { lifecycle: 'retiring', enabled: false, showInNavigation: false },
 } as const satisfies Record<string, FeatureDefinition>

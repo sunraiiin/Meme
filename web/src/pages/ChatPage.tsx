@@ -49,7 +49,6 @@ import MessageItem from './chat/MessageItem'
 import SelectionPopover from './chat/SelectionPopover'
 import type { ChatAvatars, UiMessage } from './chat/types'
 import { groupConversationsByDate } from './chat/groupByDate'
-import { useMusicStore } from '@/stores/musicStore'
 import { useChatHeaderStore } from '@/stores/chatHeaderStore'
 import { personaApi } from '@/api/personas'
 import { agentConfigApi } from '@/api/agentConfig'
@@ -80,8 +79,6 @@ export default function ChatPage() {
     () => typeof window !== 'undefined' && window.innerWidth <= 768,
   )
   const [convDrawerOpen, setConvDrawerOpen] = useState(false)
-  // 播放器可见时，输入区在手机上需上移避让
-  const playerVisible = useMusicStore((s) => s.visible)
   // 技能（任务能力包）：对话中可挂载/切换
   const skills = useSkillStore((s) => s.list)
   const ensureSkillsLoaded = useSkillStore((s) => s.ensureLoaded)
@@ -915,11 +912,7 @@ export default function ChatPage() {
         </div>
 
         {/* 输入区 */}
-        <div
-          className={`chat-input-bar${
-            isMobile && playerVisible ? ' chat-input-bar--player' : ''
-          }`}
-        >
+        <div className="chat-input-bar">
           <div className="chat-fluid" style={{ padding: '0 24px' }}>
             {/* 技能选择器 + 快捷开场提问 */}
             <div className="chat-skill-bar">

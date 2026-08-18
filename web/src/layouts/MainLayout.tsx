@@ -4,7 +4,6 @@ import {
   BellOutlined,
   BookOutlined,
   CommentOutlined,
-  CustomerServiceOutlined,
   ClockCircleOutlined,
   DeploymentUnitOutlined,
   HddOutlined,
@@ -32,8 +31,6 @@ import { useChatHeaderStore } from '@/stores/chatHeaderStore'
 import { useGroupHeaderStore } from '@/stores/groupHeaderStore'
 import { agentTaskApi } from '@/api/agentTask'
 import { AuthenticatedImage } from '@/components/AuthenticatedImage'
-import MusicPlayer from '@/components/MusicPlayer'
-import { useMusicStore } from '@/stores/musicStore'
 import {
   isFeatureEnabled,
   isFeatureVisibleInNavigation,
@@ -74,7 +71,6 @@ const menuItems: ProductMenuGroup[] = [
       { key: '/graph', icon: <DeploymentUnitOutlined />, label: '记忆图谱', feature: 'memoryGraph' },
       { key: '/search', icon: <SearchOutlined />, label: '搜索', feature: 'search' },
       { key: '/images', icon: <PictureOutlined />, label: '图片库', feature: 'imageLibrary' },
-      { key: '/music', icon: <CustomerServiceOutlined />, label: '音乐', feature: 'music' },
     ],
   },
   {
@@ -176,14 +172,6 @@ export default function MainLayout() {
     }
   }, [location.pathname])
 
-  // 音乐页沉浸式深色主题：进入 /music 整体变深色霓虹，离开自动恢复
-  const musicEnabled = isFeatureEnabled('music')
-  const immersive = musicEnabled && location.pathname === '/music'
-
-  // 浮动音乐播放器:在非音乐页且播放器可见时,给主内容区底部留出避让空间,防止右下角被遮住
-  const playerVisible = useMusicStore((s) => s.visible)
-  const needPlayerPadding = musicEnabled && playerVisible && !immersive
-
   // 主壳挂载时锁死 html/body 滚动（比 :has 更稳），卸载后恢复登录/分享页整页滚动
   useEffect(() => {
     const root = document.documentElement
@@ -208,7 +196,7 @@ export default function MainLayout() {
         gap: 10,
         paddingInline: mini ? 0 : 20,
         justifyContent: mini ? 'center' : 'flex-start',
-        color: immersive ? '#fff' : '#171719',
+        color: '#171719',
         overflow: 'hidden',
       }}
     >
@@ -248,7 +236,7 @@ export default function MainLayout() {
     return (
       <Menu
         mode="inline"
-        theme={immersive ? 'dark' : 'light'}
+        theme="light"
         inlineCollapsed={mini}
         selectedKeys={[selectedMenuKey(location.pathname)]}
         items={items}
@@ -259,10 +247,7 @@ export default function MainLayout() {
   }
 
   return (
-    <Layout
-      style={{ height: '100%', overflow: 'hidden' }}
-      className={`app-shell${immersive ? ' immersive-layout' : ''}`}
-    >
+    <Layout style={{ height: '100%', overflow: 'hidden' }} className="app-shell">
       {/* 桌面端：常驻可折叠侧边栏 */}
       {!isMobile && (
         <Sider
@@ -272,12 +257,7 @@ export default function MainLayout() {
           trigger={null}
           collapsedWidth={72}
           style={{
-            borderInlineEnd: immersive
-              ? '1px solid rgba(255,255,255,0.08)'
-              : '1px solid #f0f0f0',
-            background: immersive
-              ? 'linear-gradient(180deg, #141633 0%, #0c0d18 100%)'
-              : undefined,
+            borderInlineEnd: '1px solid #f0f0f0',
             transition: 'background 0.4s',
           }}
         >
@@ -298,9 +278,6 @@ export default function MainLayout() {
           closable={false}
           styles={{
             body: { padding: 0, display: 'flex', flexDirection: 'column', height: '100%' },
-            content: immersive
-              ? { background: 'linear-gradient(180deg, #141633 0%, #0c0d18 100%)' }
-              : undefined,
           }}
         >
           {brand(false)}
@@ -310,13 +287,7 @@ export default function MainLayout() {
         </Drawer>
       )}
 
-      <Layout
-        className="app-shell-main"
-        style={{
-          background: immersive ? '#0b0c16' : undefined,
-          transition: 'background 0.4s',
-        }}
-      >
+      <Layout className="app-shell-main">
         <Header
           style={{
             flexShrink: 0,
@@ -325,12 +296,7 @@ export default function MainLayout() {
             alignItems: 'center',
             justifyContent: 'space-between',
             gap: 8,
-            borderBottom: immersive
-              ? '1px solid rgba(255,255,255,0.08)'
-              : '1px solid #f0f0f0',
-            background: immersive ? 'rgba(18,20,40,0.8)' : undefined,
-            backdropFilter: immersive ? 'blur(10px)' : undefined,
-            transition: 'background 0.4s',
+            borderBottom: '1px solid #f0f0f0',
           }}
         >
           <div style={{ flexShrink: 0, display: 'flex', alignItems: 'center' }}>
@@ -349,7 +315,7 @@ export default function MainLayout() {
               onClick={() =>
                 isMobile ? setDrawerOpen(true) : setCollapsed((c) => !c)
               }
-              style={{ color: immersive ? '#fff' : undefined, fontSize: 18 }}
+              style={{ fontSize: 18 }}
             />
           </div>
 
@@ -434,7 +400,7 @@ export default function MainLayout() {
               }}
             >
               <Input
-                className={`top-search${immersive ? ' top-search--dark' : ''}`}
+                className="top-search"
                 prefix={<SearchOutlined style={{ color: '#98A2B3' }} />}
                 placeholder={isMobile ? '搜索…' : '搜索文档、图片、记忆…'}
                 allowClear
@@ -485,7 +451,7 @@ export default function MainLayout() {
                   </Avatar>
                 )}
                 {!isMobile && (
-                  <span style={{ fontWeight: 500, color: immersive ? '#fff' : undefined }}>
+                  <span style={{ fontWeight: 500 }}>
                     {user?.nickname || user?.username || '用户'}
                   </span>
                 )}
@@ -494,15 +460,11 @@ export default function MainLayout() {
           </Header>
           <Content
             className="app-shell-content"
-            style={{
-              padding: isMobile ? 14 : 24,
-              paddingBottom: needPlayerPadding ? (isMobile ? 96 : 120) : undefined,
-            }}
+            style={{ padding: isMobile ? 14 : 24 }}
           >
             <Outlet />
           </Content>
         </Layout>
-        {musicEnabled && <MusicPlayer />}
       </Layout>
     )
   }
