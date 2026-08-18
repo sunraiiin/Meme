@@ -22,7 +22,6 @@ from app.models.memory_model import Memory
 from app.models.memory_correction_model import MemoryCorrection
 from app.models.message_feedback_model import MessageFeedback
 from app.models.model_config_model import ModelConfig
-from app.models.notify_channel_model import NotifyChannel
 from app.models.persona_group_model import PersonaGroup
 from app.models.play_history_model import PlayHistory
 from app.models.report_share_model import ReportShare
@@ -57,7 +56,6 @@ __all__ = [
     "MemoryCorrection",
     "MessageFeedback",
     "ModelConfig",
-    "NotifyChannel",
     "PersonaGroup",
     "PlayHistory",
     "ReportShare",
