@@ -88,7 +88,7 @@ controller -> service -> repository -> model / database
 | 深度研究 | `ResearchPage` | `research_*`、`core/agent/research` | PostgreSQL、LLM、Web Search、知识库、Redis 事件 | 定时 Agent 任务、报告分享、Verifier Loop |
 | Verifier Loop | 研究质量卡片 | `core/agent/loop`、`loop_model` | PostgreSQL、独立 Judge LLM、Trace | 深度研究、定时研究任务 |
 | 多 Agent 群聊（后端兼容层） | 无前端入口 | `group_chat_*`、`core/agent/group_chat` | PostgreSQL、Redis 事件、LLM、人格、工具 | 分享邀请、真人模式 |
-| 定时 Agent 任务 | `AgentTaskPage` | `agent_task_*`、`tasks/agent_task`、`tasks/beat` | PostgreSQL、Redis/Celery、研究引擎 | 通知、研究、首页简报 |
+| 定时 Agent 任务 | `AgentTaskPage` | `agent_task_*`、`tasks/agent_task`、`tasks/beat` | PostgreSQL、Redis/Celery、研究引擎 | 研究报告、任务历史、首页简报 |
 | 通知 | `NotifyChannelPage` | `notify_*`、`core/notify` | PostgreSQL、Server 酱/企微/钉钉/Webhook | 定时任务结果推送 |
 | 情绪系统（后端兼容层） | 无前端入口 | `emotion_*`、`core/emotion`、`tasks/emotion` | PostgreSQL、Celery、LLM | 音乐推荐、每日回顾、对话后台任务 |
 | 音乐（后端兼容层） | 无前端入口 | `music_*`、`core/music`、`tasks/music` | PostgreSQL、文件存储、LLM、咪咕接口 | 情绪推荐、播放历史 |

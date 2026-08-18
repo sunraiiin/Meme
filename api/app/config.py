@@ -149,8 +149,6 @@ class Settings(BaseSettings):
 
     # 定时任务执行（单次研究的整体硬超时，防卡死任务长期占住 worker；跨平台用 asyncio.wait_for）
     research_task_timeout: int = 900  # 单次定时研究整体超时（秒）
-    # 定时任务完成后推送通知用的站点地址（拼报告链接）
-    notify_site_url: str = "https://cometxrzs.top"
 
     # ── V0.0.5 ② Verifier Loop（Loop Engineering 落地）──
     # 是否启用 Verifier Loop。关闭时 research engine 跳过质量复核环节,行为与之前完全一致。
