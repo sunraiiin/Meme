@@ -28,11 +28,9 @@ export const productFeatures = {
   complexTags: { lifecycle: 'advanced', enabled: true, showInNavigation: false },
   reportExport: { lifecycle: 'advanced', enabled: true, showInNavigation: false },
 
-  emotion: { lifecycle: 'retiring', enabled: false, showInNavigation: false },
   music: { lifecycle: 'retiring', enabled: false, showInNavigation: false },
   groupChat: { lifecycle: 'retiring', enabled: false, showInNavigation: false },
   notifications: { lifecycle: 'retiring', enabled: false, showInNavigation: false },
-  favorites: { lifecycle: 'retiring', enabled: false, showInNavigation: false },
 } as const satisfies Record<string, FeatureDefinition>
 
 export type FeatureKey = keyof typeof productFeatures

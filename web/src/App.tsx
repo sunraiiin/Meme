@@ -18,7 +18,6 @@ import AgentConfigPage from './pages/AgentConfigPage'
 import SkillPage from './pages/SkillPage'
 import ToolConfigPage from './pages/ToolConfigPage'
 import SearchPage from './pages/SearchPage'
-import FavoritesPage from './pages/FavoritesPage'
 import ProfilePage from './pages/ProfilePage'
 import JoinGroupPage from './pages/JoinGroupPage'
 import TracesPage from './pages/TracesPage'
@@ -53,7 +52,6 @@ export default function App() {
             <Route path="graph" element={<GraphPage />} />
             <Route path="music" element={<MusicLibraryPage />} />
             <Route path="search" element={<SearchPage />} />
-            <Route path="favorites" element={<FavoritesPage />} />
             <Route path="traces" element={<TracesPage />} />
             <Route path="profile" element={<ProfilePage />} />
             <Route path="settings/models" element={<ModelConfigPage />} />
