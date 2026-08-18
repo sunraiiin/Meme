@@ -5,14 +5,15 @@
 ## 当前基线
 
 - [现有系统与功能依赖地图](architecture/CURRENT-SYSTEM.md)
-- [功能保留、隐藏、删除与重设计提案](refactor/FEATURE-DECISIONS.md)
+- [功能保留、隐藏、删除与重设计决策](refactor/FEATURE-DECISIONS.md)
 - [目标架构与分阶段实施计划](refactor/TARGET-ARCHITECTURE.md)
+- [ADR-0001：项目功能范围决策](decisions/0001-product-scope.md)
 - [项目路线图](ROADMAP.md)
 - [代码来源说明](SOURCE-NOTICE.md)
 
 ## 决策状态
 
-`FEATURE-DECISIONS.md` 当前是 `Draft`。只有用户确认后的功能决策，才能进入代码删除或数据库迁移阶段。
+`FEATURE-DECISIONS.md` 和 ADR-0001 已于 2026-08-18 确认。代码删除和数据库迁移仍需按功能建立独立 Issue 和 Pull Request。
 
 ## 文档维护规则
 

@@ -1,8 +1,8 @@
 # 目标架构与实施计划
 
-> 状态：Proposed
+> 状态：Accepted for phased implementation
 >
-> 前提：功能边界提案经用户确认后再进入代码迁移。
+> 产品范围已确认；代码迁移仍按独立 Issue 和 Pull Request 分阶段实施。
 
 ## 1. 架构目标
 
@@ -55,7 +55,9 @@ flowchart TB
 
 ### 可选扩展
 
+- 定时任务作为高级能力保留，通过显式模块开关和导航策略接入。
 - Research、Verifier、MCP 和 Skills 通过显式模块开关接入。
+- 定时任务结果以站内历史为基础能力，不依赖外部通知渠道。
 - 被隐藏或待删除的功能不得继续向核心领域增加反向依赖。
 
 ## 3. 渐进式目录方向
@@ -124,6 +126,7 @@ web/src/
 
 - 根据接受的功能决策调整导航。
 - 为高级或隐藏模块增加显式开关。
+- 首版隐藏定时任务、Research、Verifier 和复杂标签管理入口。
 - 不删除数据库和后端代码，先验证核心流程不依赖隐藏页面。
 - 重写首页和首次使用引导。
 
@@ -140,7 +143,9 @@ web/src/
 
 ### Phase 4：删除确认的非核心功能
 
+- 分别删除情绪、音乐、多 Agent 群聊、通知、收藏、对话公开分享和报告公开分享。
 - 每个功能单独 Issue 和 PR。
+- 删除通知前先保证定时任务可以独立执行并在站内查看结果。
 - 先删除入口与调用，再处理 API、任务和数据表。
 - 数据库只增加新迁移，不篡改历史迁移。
 - 为需要保留的数据提供导出、迁移或明确放弃说明。
@@ -163,11 +168,12 @@ web/src/
 1. `chore: verify local development baseline`
 2. `ci: add backend and frontend quality gates`
 3. `feat: introduce product feature flags and focused navigation`
-4. `refactor: extract chat context and side effects`
-5. `refactor: define knowledge and memory tool contracts`
-6. `test: add core RAG and memory regression suite`
-7. 针对每个已确认删除功能建立独立 Issue。
-8. `docs: build interview demo and architecture narrative`
+4. `refactor: decouple scheduled tasks from notification delivery`
+5. `refactor: extract chat context and side effects`
+6. `refactor: define knowledge and memory tool contracts`
+7. `test: add core RAG and memory regression suite`
+8. 针对每个已确认删除功能建立独立 Issue。
+9. `docs: build interview demo and architecture narrative`
 
 ## 7. 变更治理
 

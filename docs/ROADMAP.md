@@ -12,15 +12,16 @@
 ## Phase 1 — 功能边界
 
 - [x] 盘点现有功能和依赖关系
-- [ ] 确认删除功能清单
-- [ ] 确认保留功能清单
-- [x] 建立第一版产品需求和验收标准草案
+- [x] 确认删除功能清单
+- [x] 确认保留与隐藏功能清单
+- [x] 建立第一版产品需求和验收标准
 
 相关文档：
 
 - [现有系统与功能依赖地图](architecture/CURRENT-SYSTEM.md)
-- [功能边界决策提案](refactor/FEATURE-DECISIONS.md)
+- [功能边界决策](refactor/FEATURE-DECISIONS.md)
 - [目标架构与实施计划](refactor/TARGET-ARCHITECTURE.md)
+- [ADR-0001：项目功能范围决策](decisions/0001-product-scope.md)
 
 ## Phase 2 — 重构与新增能力
 

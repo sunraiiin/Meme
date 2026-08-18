@@ -19,8 +19,9 @@ docs/      Meme 项目自己的架构、决策与路线图文档
 
 - [文档导航](docs/README.md)
 - [现有系统与功能依赖地图](docs/architecture/CURRENT-SYSTEM.md)
-- [功能边界决策提案](docs/refactor/FEATURE-DECISIONS.md)
+- [功能边界决策](docs/refactor/FEATURE-DECISIONS.md)
 - [目标架构与实施计划](docs/refactor/TARGET-ARCHITECTURE.md)
+- [ADR-0001：项目功能范围决策](docs/decisions/0001-product-scope.md)
 
 ## 开发原则
 
