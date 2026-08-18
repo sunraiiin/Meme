@@ -19,7 +19,6 @@ import {
   RobotOutlined,
   SearchOutlined,
   SettingOutlined,
-  ShareAltOutlined,
   StarOutlined,
   TeamOutlined,
   ThunderboltOutlined,
@@ -131,8 +130,6 @@ export default function MainLayout() {
   const chatHeaderActive = useChatHeaderStore((s) => s.active)
   const chatOpenHistory = useChatHeaderStore((s) => s.openHistory)
   const chatNewChat = useChatHeaderStore((s) => s.newChat)
-  const chatOpenShare = useChatHeaderStore((s) => s.openShare)
-  const chatCanShare = useChatHeaderStore((s) => s.canShare)
   const showChatHeader = isMobile && chatHeaderActive && location.pathname === '/chat'
 
   // 群聊页注册的顶栏操作（手机端群聊页用它替代搜索框 + 替代群聊自己的标题栏）
@@ -140,8 +137,6 @@ export default function MainLayout() {
   const groupTitle = useGroupHeaderStore((s) => s.title)
   const groupOpenList = useGroupHeaderStore((s) => s.openList)
   const groupOpenInvite = useGroupHeaderStore((s) => s.openInvite)
-  const groupOpenShare = useGroupHeaderStore((s) => s.openShare)
-  const groupCanShare = useGroupHeaderStore((s) => s.canShare)
   const groupMoreItems = useGroupHeaderStore((s) => s.moreItems)
   const showGroupHeader =
     isFeatureEnabled('groupChat') &&
@@ -387,15 +382,6 @@ export default function MainLayout() {
               >
                 新对话
               </Button>
-              {isFeatureEnabled('conversationSharing') && chatCanShare && (
-                <Button
-                  type="text"
-                  icon={<ShareAltOutlined />}
-                  onClick={() => chatOpenShare?.()}
-                >
-                  分享
-                </Button>
-              )}
             </div>
           ) : showGroupHeader ? (
             <div
@@ -433,14 +419,6 @@ export default function MainLayout() {
                 onClick={() => groupOpenInvite?.()}
                 style={{ flexShrink: 0 }}
               />
-              {groupCanShare && (
-                <Button
-                  type="text"
-                  icon={<ShareAltOutlined />}
-                  onClick={() => groupOpenShare?.()}
-                  style={{ flexShrink: 0 }}
-                />
-              )}
               {groupMoreItems && groupMoreItems.length > 0 && (
                 <Dropdown trigger={['click']} menu={{ items: groupMoreItems }}>
                   <Button type="text" icon={<MoreOutlined />} style={{ flexShrink: 0 }} />

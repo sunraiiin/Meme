@@ -30,7 +30,6 @@ import {
   PictureOutlined,
   PlusOutlined,
   SendOutlined,
-  ShareAltOutlined,
   StarFilled,
   StarOutlined,
   TeamOutlined,
@@ -57,7 +56,6 @@ import { useGroupHeaderStore } from '@/stores/groupHeaderStore'
 import { copyText } from '@/utils/clipboard'
 import { favoriteApi } from '@/api/favorites'
 import { resolveToolMeta, formatMsgTime, splitBubbles, hasBubbleSep } from '@/pages/chat/types'
-import ShareModal from '@/pages/chat/ShareModal'
 
 // 群聊页内的消息模型（含流式态 + 发送者 + 工具调用标记）
 interface GroupToolRun {
@@ -267,7 +265,6 @@ export default function GroupChatPage() {
   const [listOpen, setListOpen] = useState(false)
   const [createOpen, setCreateOpen] = useState(false)
   const [joinOpen, setJoinOpen] = useState(false)
-  const [shareOpen, setShareOpen] = useState(false)
   const [inviteOpen, setInviteOpen] = useState(false)
   const scrollRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<InputRef>(null)
@@ -818,8 +815,6 @@ export default function GroupChatPage() {
       title: activeConv.title || '群聊',
       openList: () => setListOpen(true),
       openInvite: () => setInviteOpen(true),
-      openShare: () => setShareOpen(true),
-      canShare: isOwner,
       moreItems: items,
     })
     return () => useGroupHeaderStore.getState().clear()
@@ -1006,16 +1001,6 @@ export default function GroupChatPage() {
                   title="复用当前角色组合，开启一个全新的空对话"
                 >
                   {isMobile ? '' : '开新对话'}
-                </Button>
-              )}
-              {activeConv?.is_owner && (
-                <Button
-                  type="text"
-                  icon={<ShareAltOutlined />}
-                  className="gc-share-btn"
-                  onClick={() => setShareOpen(true)}
-                >
-                  {isMobile ? '' : '分享'}
                 </Button>
               )}
               <Dropdown
@@ -1453,11 +1438,6 @@ export default function GroupChatPage() {
           await loadConversations()
           openConversation(conv.id)
         }}
-      />
-      <ShareModal
-        open={shareOpen}
-        conversationId={activeId ?? undefined}
-        onClose={() => setShareOpen(false)}
       />
       <InviteModal
         open={inviteOpen}

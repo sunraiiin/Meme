@@ -20,7 +20,6 @@ import ToolConfigPage from './pages/ToolConfigPage'
 import SearchPage from './pages/SearchPage'
 import FavoritesPage from './pages/FavoritesPage'
 import ProfilePage from './pages/ProfilePage'
-import SharePage from './pages/SharePage'
 import ReportSharePage from './pages/ReportSharePage'
 import JoinGroupPage from './pages/JoinGroupPage'
 import TracesPage from './pages/TracesPage'
@@ -34,7 +33,6 @@ export default function App() {
       <BrowserRouter>
         <Routes>
           <Route path="/login" element={<LoginPage />} />
-          <Route path="/s/:token" element={<SharePage />} />
           <Route path="/r/:token" element={<ReportSharePage />} />
           <Route path="/groups/join/:code" element={<JoinGroupPage />} />
           <Route

@@ -33,7 +33,6 @@ export const productFeatures = {
   groupChat: { lifecycle: 'retiring', enabled: false, showInNavigation: false },
   notifications: { lifecycle: 'retiring', enabled: false, showInNavigation: false },
   favorites: { lifecycle: 'retiring', enabled: false, showInNavigation: false },
-  conversationSharing: { lifecycle: 'retiring', enabled: false, showInNavigation: false },
   reportSharing: { lifecycle: 'retiring', enabled: false, showInNavigation: false },
 } as const satisfies Record<string, FeatureDefinition>
 
