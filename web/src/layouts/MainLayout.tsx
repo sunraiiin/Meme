@@ -45,7 +45,7 @@ import logo from '@/images/logo.png'
 
 const { Sider, Content, Header } = Layout
 
-// 分组导航：按职责归类，分组标题灰色小字，更清晰
+// 首版导航只呈现产品主线；高级和待删除能力仍由功能开关控制。
 type ProductMenuGroup = {
   type: 'group'
   label: string
@@ -60,14 +60,11 @@ type ProductMenuGroup = {
 const menuItems: ProductMenuGroup[] = [
   {
     type: 'group' as const,
-    label: '工作台',
+    label: '核心体验',
     children: [
-      { key: '/', icon: <AppstoreOutlined />, label: '仪表盘', feature: 'dashboard' },
+      { key: '/', icon: <AppstoreOutlined />, label: '首页', feature: 'dashboard' },
       { key: '/chat', icon: <CommentOutlined />, label: '对话', feature: 'chat' },
       { key: '/group-chat', icon: <TeamOutlined />, label: '群聊', feature: 'groupChat' },
-      { key: '/research', icon: <FileSearchOutlined />, label: '深度研究', feature: 'research' },
-      { key: '/agent-tasks', icon: <ClockCircleOutlined />, label: '定时任务', feature: 'scheduledTasks' },
-      { key: '/traces', icon: <HistoryOutlined />, label: '执行轨迹', feature: 'traces' },
     ],
   },
   {
@@ -75,26 +72,29 @@ const menuItems: ProductMenuGroup[] = [
     label: '知识与记忆',
     children: [
       { key: '/knowledge', icon: <BookOutlined />, label: '知识库', feature: 'knowledge' },
-      { key: '/images', icon: <PictureOutlined />, label: '图片库', feature: 'imageLibrary' },
       { key: '/memory', icon: <HddOutlined />, label: '记忆', feature: 'memory' },
-      { key: '/graph', icon: <DeploymentUnitOutlined />, label: '知识图谱', feature: 'memoryGraph' },
+      { key: '/graph', icon: <DeploymentUnitOutlined />, label: '记忆图谱', feature: 'memoryGraph' },
+      { key: '/search', icon: <SearchOutlined />, label: '搜索', feature: 'search' },
+      { key: '/images', icon: <PictureOutlined />, label: '图片库', feature: 'imageLibrary' },
       { key: '/music', icon: <CustomerServiceOutlined />, label: '音乐', feature: 'music' },
+      { key: '/favorites', icon: <StarOutlined />, label: '收藏夹', feature: 'favorites' },
     ],
   },
   {
     type: 'group' as const,
-    label: '检索与收藏',
+    label: '质量与观察',
     children: [
-      { key: '/search', icon: <SearchOutlined />, label: '全局搜索', feature: 'search' },
-      { key: '/favorites', icon: <StarOutlined />, label: '收藏夹', feature: 'favorites' },
+      { key: '/traces', icon: <HistoryOutlined />, label: '调用追踪', feature: 'traces' },
+      { key: '/research', icon: <FileSearchOutlined />, label: '深度研究', feature: 'research' },
+      { key: '/agent-tasks', icon: <ClockCircleOutlined />, label: '定时任务', feature: 'scheduledTasks' },
     ],
   },
   {
     type: 'group' as const,
     label: '设置',
     children: [
-      { key: '/settings/models', icon: <SettingOutlined />, label: '模型配置', feature: 'modelConfig' },
-      { key: '/settings/agent', icon: <RobotOutlined />, label: '角色配置', feature: 'agentConfig' },
+      { key: '/settings/models', icon: <SettingOutlined />, label: '模型', feature: 'modelConfig' },
+      { key: '/settings/agent', icon: <RobotOutlined />, label: 'AI 助手', feature: 'agentConfig' },
       { key: '/settings/skills', icon: <ThunderboltOutlined />, label: '技能', feature: 'skills' },
       { key: '/settings/tools', icon: <ToolOutlined />, label: '工具配置', feature: 'mcp' },
       { key: '/settings/notify', icon: <BellOutlined />, label: '消息推送', feature: 'notifications' },
@@ -114,6 +114,11 @@ function useIsMobile() {
     return () => mq.removeEventListener('change', handler)
   }, [])
   return isMobile
+}
+
+function selectedMenuKey(pathname: string): string {
+  if (pathname.startsWith('/knowledge-bases/')) return '/knowledge'
+  return pathname
 }
 
 export default function MainLayout() {
@@ -252,7 +257,7 @@ export default function MainLayout() {
         mode="inline"
         theme={immersive ? 'dark' : 'light'}
         inlineCollapsed={mini}
-        selectedKeys={[location.pathname]}
+        selectedKeys={[selectedMenuKey(location.pathname)]}
         items={items}
         onClick={({ key }) => navigate(key)}
         style={{ borderInlineEnd: 'none', background: 'transparent' }}
