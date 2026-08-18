@@ -18,7 +18,6 @@ export interface AgentTask {
   trigger_weekday: number | null
   trigger_interval_hours: number | null
   enabled: boolean
-  notify_enabled: boolean
   last_run_at: string | null
   last_status: 'running' | 'done' | 'failed' | null
   next_run_at: string | null
@@ -34,7 +33,6 @@ export interface AgentTaskUpsert {
   trigger_weekday?: number | null
   trigger_interval_hours?: number | null
   enabled: boolean
-  notify_enabled?: boolean
 }
 
 export interface AgentTaskRun {

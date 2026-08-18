@@ -1,7 +1,6 @@
 import { Avatar, Badge, Button, Drawer, Dropdown, Input, Layout, Menu, Space, message } from 'antd'
 import {
   AppstoreOutlined,
-  BellOutlined,
   BookOutlined,
   CommentOutlined,
   ClockCircleOutlined,
@@ -81,7 +80,6 @@ const menuItems: ProductMenuGroup[] = [
       { key: '/settings/agent', icon: <RobotOutlined />, label: 'AI 助手', feature: 'agentConfig' },
       { key: '/settings/skills', icon: <ThunderboltOutlined />, label: '技能', feature: 'skills' },
       { key: '/settings/tools', icon: <ToolOutlined />, label: '工具配置', feature: 'mcp' },
-      { key: '/settings/notify', icon: <BellOutlined />, label: '消息推送', feature: 'notifications' },
     ],
   },
 ]

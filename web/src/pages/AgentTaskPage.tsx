@@ -108,7 +108,6 @@ export default function AgentTaskPage() {
       trigger_type: 'daily',
       trigger_time: dayjs('09:00', 'HH:mm'),
       enabled: true,
-      notify_enabled: true,
     })
     setModalOpen(true)
   }
@@ -123,7 +122,6 @@ export default function AgentTaskPage() {
       trigger_weekday: t.trigger_weekday ?? 0,
       trigger_interval_hours: t.trigger_interval_hours ?? 24,
       enabled: t.enabled,
-      notify_enabled: t.notify_enabled,
     })
     setModalOpen(true)
   }
@@ -140,7 +138,6 @@ export default function AgentTaskPage() {
       trigger_interval_hours:
         v.trigger_type === 'interval' ? v.trigger_interval_hours : null,
       enabled: v.enabled,
-      notify_enabled: v.notify_enabled,
     }
     try {
       if (editing) {
@@ -352,14 +349,6 @@ export default function AgentTaskPage() {
             </Form.Item>
           )}
           <Form.Item name="enabled" label="启用" valuePropName="checked">
-            <Switch />
-          </Form.Item>
-          <Form.Item
-            name="notify_enabled"
-            label="跑完推送到消息渠道"
-            valuePropName="checked"
-            extra="完成后把报告摘要推到你配置的消息渠道（需先在「消息推送」配置）"
-          >
             <Switch />
           </Form.Item>
         </Form>
