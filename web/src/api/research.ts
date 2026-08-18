@@ -186,18 +186,6 @@ export const researchApi = {
       { topic },
     )
   },
-  share(id: string, payload?: { title?: string; expire_days?: number | null }) {
-    return client.post<unknown, Wrapped<ReportShare>>(`/research/${id}/share`, {
-      title: payload?.title ?? null,
-      expire_days: payload?.expire_days ?? null,
-    })
-  },
-  listShares() {
-    return client.get<unknown, Wrapped<ReportShare[]>>('/research/shares')
-  },
-  revokeShare(shareId: string) {
-    return client.delete<unknown, Wrapped<null>>(`/research/shares/${shareId}`)
-  },
   // 导出 Word：返回 docx 文件 blob（带鉴权头）
   async exportDocx(id: string): Promise<Blob> {
     const token = localStorage.getItem('access_token')
@@ -207,30 +195,6 @@ export const researchApi = {
     if (!resp.ok) throw new Error(`导出失败（HTTP ${resp.status}）`)
     return resp.blob()
   },
-}
-
-export interface ReportShare {
-  id: string
-  report_id: string
-  share_token: string
-  title: string
-  is_active: boolean
-  expire_at: string | null
-  view_count: number
-  created_at: string | null
-}
-
-export interface PublicReportShare {
-  title: string
-  markdown: string
-  sources: ResearchSource[]
-  created_at: string | null
-}
-
-export function fetchPublicReportShare(token: string) {
-  return client.get<unknown, { code: number; message: string; data: PublicReportShare }>(
-    `/public/report-shares/${token}`,
-  )
 }
 
 function dispatch(
