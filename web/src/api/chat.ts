@@ -346,7 +346,7 @@ export async function subscribeGroupEvents(
         else if (line.startsWith('data:')) data += line.slice(5).trim()
       }
       if (!data) continue
-      let payload: Record<string, unknown> = {}
+      let payload: Record<string, unknown>
       try {
         payload = JSON.parse(data)
       } catch {
@@ -435,7 +435,7 @@ export async function streamGroupChat(
         else if (line.startsWith('data:')) data += line.slice(5).trim()
       }
       if (!data) continue
-      let payload: Record<string, unknown> = {}
+      let payload: Record<string, unknown>
       try {
         payload = JSON.parse(data)
       } catch {
@@ -547,7 +547,7 @@ export async function subscribeChatEvents(
         else if (line.startsWith('data:')) data += line.slice(5).trim()
       }
       if (!data) continue
-      let payload: Record<string, unknown> = {}
+      let payload: Record<string, unknown>
       try {
         payload = JSON.parse(data)
       } catch {
@@ -601,7 +601,7 @@ async function streamSSE(
         else if (line.startsWith('data:')) data += line.slice(5).trim()
       }
       if (!data) continue
-      let payload: Record<string, unknown> = {}
+      let payload: Record<string, unknown>
       try {
         payload = JSON.parse(data)
       } catch {

@@ -331,7 +331,7 @@ async function consumeSSE(
         else if (line.startsWith('data:')) data += line.slice(5).trim()
       }
       if (!data) continue
-      let payload: Record<string, unknown> = {}
+      let payload: Record<string, unknown>
       try {
         payload = JSON.parse(data)
       } catch {
