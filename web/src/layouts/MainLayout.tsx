@@ -12,30 +12,22 @@ import {
   LogoutOutlined,
   MenuFoldOutlined,
   MenuUnfoldOutlined,
-  MoreOutlined,
   PictureOutlined,
   PlusOutlined,
   RobotOutlined,
   SearchOutlined,
   SettingOutlined,
-  TeamOutlined,
   ThunderboltOutlined,
   ToolOutlined,
   UserOutlined,
-  UsergroupAddOutlined,
 } from '@ant-design/icons'
 import { useEffect, useState, type ReactNode } from 'react'
 import { Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { useAuthStore } from '@/stores/authStore'
 import { useChatHeaderStore } from '@/stores/chatHeaderStore'
-import { useGroupHeaderStore } from '@/stores/groupHeaderStore'
 import { agentTaskApi } from '@/api/agentTask'
 import { AuthenticatedImage } from '@/components/AuthenticatedImage'
-import {
-  isFeatureEnabled,
-  isFeatureVisibleInNavigation,
-  type FeatureKey,
-} from '@/config/features'
+import { isFeatureVisibleInNavigation, type FeatureKey } from '@/config/features'
 import logo from '@/images/logo.png'
 
 const { Sider, Content, Header } = Layout
@@ -59,7 +51,6 @@ const menuItems: ProductMenuGroup[] = [
     children: [
       { key: '/', icon: <AppstoreOutlined />, label: '首页', feature: 'dashboard' },
       { key: '/chat', icon: <CommentOutlined />, label: '对话', feature: 'chat' },
-      { key: '/group-chat', icon: <TeamOutlined />, label: '群聊', feature: 'groupChat' },
     ],
   },
   {
@@ -125,18 +116,6 @@ export default function MainLayout() {
   const chatOpenHistory = useChatHeaderStore((s) => s.openHistory)
   const chatNewChat = useChatHeaderStore((s) => s.newChat)
   const showChatHeader = isMobile && chatHeaderActive && location.pathname === '/chat'
-
-  // 群聊页注册的顶栏操作（手机端群聊页用它替代搜索框 + 替代群聊自己的标题栏）
-  const groupHeaderActive = useGroupHeaderStore((s) => s.active)
-  const groupTitle = useGroupHeaderStore((s) => s.title)
-  const groupOpenList = useGroupHeaderStore((s) => s.openList)
-  const groupOpenInvite = useGroupHeaderStore((s) => s.openInvite)
-  const groupMoreItems = useGroupHeaderStore((s) => s.moreItems)
-  const showGroupHeader =
-    isFeatureEnabled('groupChat') &&
-    isMobile &&
-    groupHeaderActive &&
-    location.pathname === '/group-chat'
 
   // 桌面端：侧边栏折叠（窄条）；移动端：抽屉开关
   const [collapsed, setCollapsed] = useState(false)
@@ -319,7 +298,7 @@ export default function MainLayout() {
             />
           </div>
 
-          {/* 中间区：手机端聊天页显示「会话 / 新对话」，群聊页显示群控制，其余页面显示搜索框 */}
+          {/* 中间区：手机端聊天页显示「会话 / 新对话」，其余页面显示搜索框 */}
           {showChatHeader ? (
             <div
               style={{
@@ -346,48 +325,6 @@ export default function MainLayout() {
               >
                 新对话
               </Button>
-            </div>
-          ) : showGroupHeader ? (
-            <div
-              style={{
-                flex: 1,
-                display: 'flex',
-                alignItems: 'center',
-                gap: 4,
-                minWidth: 0,
-                padding: '0 4px',
-              }}
-            >
-              <Button
-                type="text"
-                icon={<TeamOutlined />}
-                onClick={() => groupOpenList?.()}
-                style={{ flexShrink: 0 }}
-              />
-              <span
-                style={{
-                  flex: 1,
-                  minWidth: 0,
-                  fontWeight: 600,
-                  fontSize: 15,
-                  overflow: 'hidden',
-                  textOverflow: 'ellipsis',
-                  whiteSpace: 'nowrap',
-                }}
-              >
-                {groupTitle || '群聊'}
-              </span>
-              <Button
-                type="text"
-                icon={<UsergroupAddOutlined />}
-                onClick={() => groupOpenInvite?.()}
-                style={{ flexShrink: 0 }}
-              />
-              {groupMoreItems && groupMoreItems.length > 0 && (
-                <Dropdown trigger={['click']} menu={{ items: groupMoreItems }}>
-                  <Button type="text" icon={<MoreOutlined />} style={{ flexShrink: 0 }} />
-                </Dropdown>
-              )}
             </div>
           ) : (
             <div

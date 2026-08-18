@@ -211,7 +211,7 @@ export default function ChatPage() {
   const loadConversations = async () => {
     try {
       const { data } = await chatApi.listConversations()
-      // 单聊列表排除群聊会话（is_group），群聊在「群聊」页单独管理
+      // 单聊列表排除历史群会话（后端兼容数据仍保留）
       setConversations(
         (data as (Conversation & { is_group?: boolean })[]).filter((c) => !c.is_group),
       )
