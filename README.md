@@ -15,6 +15,13 @@ docker/    基础设施相关 Docker 配置
 docs/      Meme 项目自己的架构、决策与路线图文档
 ```
 
+## 项目文档
+
+- [文档导航](docs/README.md)
+- [现有系统与功能依赖地图](docs/architecture/CURRENT-SYSTEM.md)
+- [功能边界决策提案](docs/refactor/FEATURE-DECISIONS.md)
+- [目标架构与实施计划](docs/refactor/TARGET-ARCHITECTURE.md)
+
 ## 开发原则
 
 - `main` 保持可运行状态。
