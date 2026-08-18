@@ -27,7 +27,7 @@ import {
   UserOutlined,
   UsergroupAddOutlined,
 } from '@ant-design/icons'
-import { useEffect, useState } from 'react'
+import { useEffect, useState, type ReactNode } from 'react'
 import { Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { useAuthStore } from '@/stores/authStore'
 import { useChatHeaderStore } from '@/stores/chatHeaderStore'
@@ -36,52 +36,68 @@ import { agentTaskApi } from '@/api/agentTask'
 import { AuthenticatedImage } from '@/components/AuthenticatedImage'
 import MusicPlayer from '@/components/MusicPlayer'
 import { useMusicStore } from '@/stores/musicStore'
+import {
+  isFeatureEnabled,
+  isFeatureVisibleInNavigation,
+  type FeatureKey,
+} from '@/config/features'
 import logo from '@/images/logo.png'
 
 const { Sider, Content, Header } = Layout
 
 // 分组导航：按职责归类，分组标题灰色小字，更清晰
-const menuItems = [
+type ProductMenuGroup = {
+  type: 'group'
+  label: string
+  children: Array<{
+    key: string
+    icon: ReactNode
+    label: string
+    feature: FeatureKey
+  }>
+}
+
+const menuItems: ProductMenuGroup[] = [
   {
     type: 'group' as const,
     label: '工作台',
     children: [
-      { key: '/', icon: <AppstoreOutlined />, label: '仪表盘' },
-      { key: '/chat', icon: <CommentOutlined />, label: '对话' },
-      { key: '/group-chat', icon: <TeamOutlined />, label: '群聊' },
-      { key: '/research', icon: <FileSearchOutlined />, label: '深度研究' },
-      { key: '/agent-tasks', icon: <ClockCircleOutlined />, label: '定时任务' },
-      { key: '/traces', icon: <HistoryOutlined />, label: '执行轨迹' },
+      { key: '/', icon: <AppstoreOutlined />, label: '仪表盘', feature: 'dashboard' },
+      { key: '/chat', icon: <CommentOutlined />, label: '对话', feature: 'chat' },
+      { key: '/group-chat', icon: <TeamOutlined />, label: '群聊', feature: 'groupChat' },
+      { key: '/research', icon: <FileSearchOutlined />, label: '深度研究', feature: 'research' },
+      { key: '/agent-tasks', icon: <ClockCircleOutlined />, label: '定时任务', feature: 'scheduledTasks' },
+      { key: '/traces', icon: <HistoryOutlined />, label: '执行轨迹', feature: 'traces' },
     ],
   },
   {
     type: 'group' as const,
     label: '知识与记忆',
     children: [
-      { key: '/knowledge', icon: <BookOutlined />, label: '知识库' },
-      { key: '/images', icon: <PictureOutlined />, label: '图片库' },
-      { key: '/memory', icon: <HddOutlined />, label: '记忆' },
-      { key: '/graph', icon: <DeploymentUnitOutlined />, label: '知识图谱' },
-      { key: '/music', icon: <CustomerServiceOutlined />, label: '音乐' },
+      { key: '/knowledge', icon: <BookOutlined />, label: '知识库', feature: 'knowledge' },
+      { key: '/images', icon: <PictureOutlined />, label: '图片库', feature: 'imageLibrary' },
+      { key: '/memory', icon: <HddOutlined />, label: '记忆', feature: 'memory' },
+      { key: '/graph', icon: <DeploymentUnitOutlined />, label: '知识图谱', feature: 'memoryGraph' },
+      { key: '/music', icon: <CustomerServiceOutlined />, label: '音乐', feature: 'music' },
     ],
   },
   {
     type: 'group' as const,
     label: '检索与收藏',
     children: [
-      { key: '/search', icon: <SearchOutlined />, label: '全局搜索' },
-      { key: '/favorites', icon: <StarOutlined />, label: '收藏夹' },
+      { key: '/search', icon: <SearchOutlined />, label: '全局搜索', feature: 'search' },
+      { key: '/favorites', icon: <StarOutlined />, label: '收藏夹', feature: 'favorites' },
     ],
   },
   {
     type: 'group' as const,
     label: '设置',
     children: [
-      { key: '/settings/models', icon: <SettingOutlined />, label: '模型配置' },
-      { key: '/settings/agent', icon: <RobotOutlined />, label: '角色配置' },
-      { key: '/settings/skills', icon: <ThunderboltOutlined />, label: '技能' },
-      { key: '/settings/tools', icon: <ToolOutlined />, label: '工具配置' },
-      { key: '/settings/notify', icon: <BellOutlined />, label: '消息推送' },
+      { key: '/settings/models', icon: <SettingOutlined />, label: '模型配置', feature: 'modelConfig' },
+      { key: '/settings/agent', icon: <RobotOutlined />, label: '角色配置', feature: 'agentConfig' },
+      { key: '/settings/skills', icon: <ThunderboltOutlined />, label: '技能', feature: 'skills' },
+      { key: '/settings/tools', icon: <ToolOutlined />, label: '工具配置', feature: 'mcp' },
+      { key: '/settings/notify', icon: <BellOutlined />, label: '消息推送', feature: 'notifications' },
     ],
   },
 ]
@@ -123,7 +139,10 @@ export default function MainLayout() {
   const groupCanShare = useGroupHeaderStore((s) => s.canShare)
   const groupMoreItems = useGroupHeaderStore((s) => s.moreItems)
   const showGroupHeader =
-    isMobile && groupHeaderActive && location.pathname === '/group-chat'
+    isFeatureEnabled('groupChat') &&
+    isMobile &&
+    groupHeaderActive &&
+    location.pathname === '/group-chat'
 
   // 桌面端：侧边栏折叠（窄条）；移动端：抽屉开关
   const [collapsed, setCollapsed] = useState(false)
@@ -137,6 +156,11 @@ export default function MainLayout() {
   // 定时任务未读红点：轮询 + 路由切换时刷新（离开任务页 mark-seen 后归零）
   const [unreadTasks, setUnreadTasks] = useState(0)
   useEffect(() => {
+    if (!isFeatureVisibleInNavigation('scheduledTasks')) {
+      setUnreadTasks(0)
+      return
+    }
+
     let alive = true
     const fetchUnread = () => {
       agentTaskApi
@@ -155,11 +179,12 @@ export default function MainLayout() {
   }, [location.pathname])
 
   // 音乐页沉浸式深色主题：进入 /music 整体变深色霓虹，离开自动恢复
-  const immersive = location.pathname === '/music'
+  const musicEnabled = isFeatureEnabled('music')
+  const immersive = musicEnabled && location.pathname === '/music'
 
   // 浮动音乐播放器:在非音乐页且播放器可见时,给主内容区底部留出避让空间,防止右下角被遮住
   const playerVisible = useMusicStore((s) => s.visible)
-  const needPlayerPadding = playerVisible && !immersive
+  const needPlayerPadding = musicEnabled && playerVisible && !immersive
 
   // 主壳挂载时锁死 html/body 滚动（比 :has 更稳），卸载后恢复登录/分享页整页滚动
   useEffect(() => {
@@ -202,25 +227,26 @@ export default function MainLayout() {
 
   const navMenu = (mini: boolean) => {
     // 给「定时任务」注入未读红点（不改全局静态 menuItems）
-    const items = menuItems.map((group) =>
-      'children' in group
-        ? {
-            ...group,
-            children: group.children.map((it) =>
-              it.key === '/agent-tasks' && unreadTasks > 0 && !mini
-                ? {
-                    ...it,
-                    label: (
-                      <Badge count={unreadTasks} size="small" offset={[10, 0]}>
-                        <span>{it.label}</span>
-                      </Badge>
-                    ),
-                  }
-                : it,
-            ),
-          }
-        : group,
-    )
+    const items = menuItems
+      .map((group) => ({
+        ...group,
+        children: group.children
+          .filter((item) => isFeatureVisibleInNavigation(item.feature))
+          .map((item) => {
+            const menuItem = { key: item.key, icon: item.icon, label: item.label }
+            return item.key === '/agent-tasks' && unreadTasks > 0 && !mini
+              ? {
+                  ...menuItem,
+                  label: (
+                    <Badge count={unreadTasks} size="small" offset={[10, 0]}>
+                      <span>{item.label}</span>
+                    </Badge>
+                  ),
+                }
+              : menuItem
+          }),
+      }))
+      .filter((group) => group.children.length > 0)
     return (
       <Menu
         mode="inline"
@@ -356,7 +382,7 @@ export default function MainLayout() {
               >
                 新对话
               </Button>
-              {chatCanShare && (
+              {isFeatureEnabled('conversationSharing') && chatCanShare && (
                 <Button
                   type="text"
                   icon={<ShareAltOutlined />}
@@ -495,7 +521,7 @@ export default function MainLayout() {
             <Outlet />
           </Content>
         </Layout>
-        <MusicPlayer />
+        {musicEnabled && <MusicPlayer />}
       </Layout>
     )
   }
