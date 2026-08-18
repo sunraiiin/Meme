@@ -48,8 +48,6 @@ class AgentTask(Base):
     )  # interval 用
 
     enabled: Mapped[bool] = mapped_column(Boolean, default=True, index=True)
-    # Deprecated compatibility field. Task execution no longer sends notifications.
-    notify_enabled: Mapped[bool] = mapped_column(Boolean, default=True)
     last_run_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True
     )

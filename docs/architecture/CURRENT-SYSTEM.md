@@ -89,7 +89,6 @@ controller -> service -> repository -> model / database
 | Verifier Loop | 研究质量卡片 | `core/agent/loop`、`loop_model` | PostgreSQL、独立 Judge LLM、Trace | 深度研究、定时研究任务 |
 | 多 Agent 群聊（后端兼容层） | 无前端入口 | `group_chat_*`、`core/agent/group_chat` | PostgreSQL、Redis 事件、LLM、人格、工具 | 分享邀请、真人模式 |
 | 定时 Agent 任务 | `AgentTaskPage` | `agent_task_*`、`tasks/agent_task`、`tasks/beat` | PostgreSQL、Redis/Celery、研究引擎 | 研究报告、任务历史、首页简报 |
-| 通知（后端兼容层） | 无前端入口 | `notify_*`、`core/notify` | PostgreSQL、Server 酱/企微/钉钉/Webhook | 历史接口与数据兼容；不再作为定时任务依赖 |
 | 情绪系统（后端兼容层） | 无前端入口 | `emotion_*`、`core/emotion`、`tasks/emotion` | PostgreSQL、Celery、LLM | 音乐推荐、每日回顾、对话后台任务 |
 | 音乐（后端兼容层） | 无前端入口 | `music_*`、`core/music`、`tasks/music` | PostgreSQL、文件存储、LLM、咪咕接口 | 情绪推荐、播放历史 |
 | 搜索、标签、收藏 | `SearchPage`、`FavoritesPage` | `search_*`、`tag_*`、`favorite_*` | PostgreSQL、ES、Neo4j | 导航和内容管理 |
@@ -164,7 +163,7 @@ L3 Agent 编排
    tools / personas / skills / MCP / tracing
 
 L4 扩展体验
-   research / verifier / group chat backend compatibility / scheduled tasks / notify
+   research / verifier / group chat backend compatibility / scheduled tasks
    emotion/music backend compatibility / sharing / dashboard / favorites
 ```
 

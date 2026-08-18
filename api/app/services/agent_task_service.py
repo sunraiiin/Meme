@@ -83,7 +83,6 @@ class AgentTaskService:
             trigger_weekday=body.trigger_weekday,
             trigger_interval_hours=body.trigger_interval_hours,
             enabled=body.enabled,
-            notify_enabled=body.notify_enabled,
         )
         task.next_run_at = compute_next_run(task) if body.enabled else None
         created = await self.repo.create(task)
@@ -103,7 +102,6 @@ class AgentTaskService:
         task.trigger_weekday = body.trigger_weekday
         task.trigger_interval_hours = body.trigger_interval_hours
         task.enabled = body.enabled
-        task.notify_enabled = body.notify_enabled
         task.next_run_at = compute_next_run(task) if body.enabled else None
         return await self.repo.save(task)
 
@@ -232,7 +230,6 @@ class AgentTaskService:
             "trigger_weekday": t.trigger_weekday,
             "trigger_interval_hours": t.trigger_interval_hours,
             "enabled": t.enabled,
-            "notify_enabled": t.notify_enabled,
             "last_run_at": t.last_run_at.isoformat() if t.last_run_at else None,
             "last_status": t.last_status or None,
             "next_run_at": t.next_run_at.isoformat() if t.next_run_at else None,
