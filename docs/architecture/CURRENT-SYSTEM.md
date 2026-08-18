@@ -10,7 +10,7 @@
 
 ## 1. 系统定位
 
-当前代码是一个多用户个人 AI 知识库与记忆助手，包含知识库 RAG、个人记忆图谱、LLM Agent、深度研究、多 Agent 群聊、定时任务、评测与执行追踪等能力。情绪和音乐的前端体验已退役，后端接口、任务和数据暂作为兼容层保留。
+当前代码是一个多用户个人 AI 知识库与记忆助手，包含知识库 RAG、个人记忆图谱、LLM Agent、深度研究、定时任务、评测与执行追踪等能力。情绪、音乐和多 Agent 群聊的前端体验已退役，相关后端接口、任务和数据暂作为兼容层保留。
 
 它采用前后端分离的模块化单体结构，异步重任务通过 Celery 执行，业务数据和检索数据分布在四类存储中。
 
@@ -87,7 +87,7 @@ controller -> service -> repository -> model / database
 | 人格与 Skills | `AgentConfigPage`、`SkillPage` | `agent_config_*`、`agent_persona_*`、`persona_group_*`、`skill_*` | PostgreSQL、Prompt 模板 | 单聊、群聊、Agent 工具范围 |
 | 深度研究 | `ResearchPage` | `research_*`、`core/agent/research` | PostgreSQL、LLM、Web Search、知识库、Redis 事件 | 定时 Agent 任务、报告分享、Verifier Loop |
 | Verifier Loop | 研究质量卡片 | `core/agent/loop`、`loop_model` | PostgreSQL、独立 Judge LLM、Trace | 深度研究、定时研究任务 |
-| 多 Agent 群聊 | `GroupChatPage`、`JoinGroupPage` | `group_chat_*`、`core/agent/group_chat` | PostgreSQL、Redis 事件、LLM、人格、工具 | 分享邀请、真人模式 |
+| 多 Agent 群聊（后端兼容层） | 无前端入口 | `group_chat_*`、`core/agent/group_chat` | PostgreSQL、Redis 事件、LLM、人格、工具 | 分享邀请、真人模式 |
 | 定时 Agent 任务 | `AgentTaskPage` | `agent_task_*`、`tasks/agent_task`、`tasks/beat` | PostgreSQL、Redis/Celery、研究引擎 | 通知、研究、首页简报 |
 | 通知 | `NotifyChannelPage` | `notify_*`、`core/notify` | PostgreSQL、Server 酱/企微/钉钉/Webhook | 定时任务结果推送 |
 | 情绪系统（后端兼容层） | 无前端入口 | `emotion_*`、`core/emotion`、`tasks/emotion` | PostgreSQL、Celery、LLM | 音乐推荐、每日回顾、对话后台任务 |
@@ -164,7 +164,7 @@ L3 Agent 编排
    tools / personas / skills / MCP / tracing
 
 L4 扩展体验
-   research / verifier / group chat / scheduled tasks / notify
+   research / verifier / group chat backend compatibility / scheduled tasks / notify
    emotion/music backend compatibility / sharing / dashboard / favorites
 ```
 

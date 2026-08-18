@@ -9,7 +9,6 @@ import ImagePage from './pages/ImagePage'
 import MemoryPage from './pages/MemoryPage'
 import GraphPage from './pages/GraphPage'
 import ChatPage from './pages/ChatPage'
-import GroupChatPage from './pages/GroupChatPage'
 import ResearchPage from './pages/ResearchPage'
 import AgentTaskPage from './pages/AgentTaskPage'
 import NotifyChannelPage from './pages/NotifyChannelPage'
@@ -18,7 +17,6 @@ import SkillPage from './pages/SkillPage'
 import ToolConfigPage from './pages/ToolConfigPage'
 import SearchPage from './pages/SearchPage'
 import ProfilePage from './pages/ProfilePage'
-import JoinGroupPage from './pages/JoinGroupPage'
 import TracesPage from './pages/TracesPage'
 import RequireAuth from './components/RequireAuth'
 import ErrorBoundary from './components/ErrorBoundary'
@@ -30,7 +28,6 @@ export default function App() {
       <BrowserRouter>
         <Routes>
           <Route path="/login" element={<LoginPage />} />
-          <Route path="/groups/join/:code" element={<JoinGroupPage />} />
           <Route
             path="/"
             element={
@@ -41,7 +38,6 @@ export default function App() {
           >
             <Route index element={<HomePage />} />
             <Route path="chat" element={<ChatPage />} />
-            <Route path="group-chat" element={<GroupChatPage />} />
             <Route path="research" element={<ResearchPage />} />
             <Route path="agent-tasks" element={<AgentTaskPage />} />
             <Route path="knowledge" element={<KnowledgeBasePage />} />
