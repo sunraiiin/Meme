@@ -40,7 +40,10 @@ async def describe_image(
 
     data, mime = compress_for_vision(content, file_ext)
     image_b64 = base64.b64encode(data).decode()
-    answer = await client.vision(_PROMPT, image_b64, mime=mime, max_tokens=1024)
+    # GLM-4.6V may spend part of the output budget on reasoning before the
+    # requested JSON. 1024 tokens can therefore truncate the JSON and leave
+    # the image with no searchable metadata.
+    answer = await client.vision(_PROMPT, image_b64, mime=mime, max_tokens=4096)
     return _parse(answer)
 
 
@@ -57,9 +60,42 @@ def _parse(answer: str) -> dict:
         default["description"] = answer.strip()[:2000]
         return default
     objects = data.get("objects")
-    return {
-        "description": str(data.get("description", ""))[:2000],
-        "ocr_text": str(data.get("ocr_text", ""))[:2000],
-        "objects": objects if isinstance(objects, list) else [],
-        "scene": str(data.get("scene", ""))[:64],
+    normalized = {
+        "description": str(data.get("description") or "").strip()[:2000],
+        "ocr_text": str(data.get("ocr_text") or "").strip()[:2000],
+        "objects": [
+            str(item).strip()[:128]
+            for item in (objects if isinstance(objects, list) else [])
+            if str(item).strip()
+        ],
+        "scene": str(data.get("scene") or "").strip()[:64],
     }
+    # A partially repaired response can technically be a JSON object while
+    # still containing no usable fields. Keep a bounded fallback so the task
+    # can either index useful text or fail visibly instead of reporting done.
+    if not any(
+        (
+            normalized["description"],
+            normalized["ocr_text"],
+            normalized["objects"],
+            normalized["scene"],
+        )
+    ):
+        normalized["description"] = answer.strip()[:2000]
+    return normalized
+
+
+def build_searchable_text(info: dict) -> str:
+    """Build the text used for image retrieval from multimodal metadata."""
+    objects = info.get("objects") or []
+    object_text = " ".join(str(item).strip() for item in objects if str(item).strip())
+    return "\n".join(
+        value
+        for value in (
+            str(info.get("description") or "").strip(),
+            str(info.get("ocr_text") or "").strip(),
+            object_text,
+            str(info.get("scene") or "").strip(),
+        )
+        if value
+    )
