@@ -34,6 +34,7 @@ export interface ImageListData {
 export interface ImageSearchHit {
   chunk_id: string
   content: string
+  matched_content: string
   doc_name: string | null
   source_id: string | null
   source_type: string | null

@@ -41,6 +41,7 @@ class SearchRequest(BaseModel):
 class SearchHit(BaseModel):
     chunk_id: str
     content: str
+    matched_content: str
     doc_name: str | None
     source_id: str | None
     source_type: str | None

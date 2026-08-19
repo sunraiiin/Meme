@@ -142,6 +142,7 @@ async def hybrid_search(
                 {
                     "chunk_id": cid,
                     "content": content,
+                    "matched_content": src.get("content", ""),
                     "doc_name": src.get("doc_name"),
                     "source_id": src.get("source_id"),
                     "source_type": src.get("source_type"),
@@ -173,6 +174,7 @@ async def hybrid_search(
             {
                 "chunk_id": cid,
                 "content": content,
+                "matched_content": src.get("content", ""),
                 "doc_name": src.get("doc_name"),
                 "source_id": src.get("source_id"),
                 "source_type": src.get("source_type"),
