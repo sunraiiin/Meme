@@ -179,11 +179,11 @@ export default function MainLayout() {
     >
       <img
         src={logo}
-        alt="彗记"
+        alt="Meme"
         style={{ width: 36, height: 36, borderRadius: 9, objectFit: 'cover', flexShrink: 0 }}
       />
       {!mini && (
-        <span style={{ fontWeight: 600, fontSize: 19, whiteSpace: 'nowrap' }}>彗记 Comet</span>
+        <span style={{ fontWeight: 600, fontSize: 19, whiteSpace: 'nowrap' }}>Meme</span>
       )}
     </div>
   )

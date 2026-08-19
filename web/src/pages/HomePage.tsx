@@ -25,7 +25,8 @@ import { researchApi, type ReportBrief } from '@/api/research'
 import { modelApi, type ModelConfigItem } from '@/api/models'
 import { useAuthStore } from '@/stores/authStore'
 
-const WELCOME_SEEN_KEY = 'comet_welcome_seen'
+const WELCOME_SEEN_KEY = 'meme_welcome_seen'
+const LEGACY_WELCOME_SEEN_KEY = 'comet_welcome_seen'
 
 /**
  * 仪表盘 —— V0.0.5 收尾大瘦身:只保留日常真正高频用的 4 块。
@@ -34,7 +35,7 @@ const WELCOME_SEEN_KEY = 'comet_welcome_seen'
  *
  * 去掉:数据概览 6 KPI + 4 张大 ECharts(知识库分类/记忆新增/情绪趋势/情绪分布)
  *      + Agent 简报列表 + 快速提问输入框(对话页本身就一个输入框,仪表盘不需要二重)。
- *      Agent 工程指标(Loop 健康度 + 成本)迁去「执行轨迹 /traces」聚合在一起。
+ *      Agent 工程指标与成本信息集中在「执行轨迹 /traces」。
  */
 export default function HomePage() {
   const navigate = useNavigate()
@@ -165,7 +166,7 @@ export default function HomePage() {
     { icon: <HddOutlined />, label: '记忆图谱', desc: '实体关系与画像', to: '/memory', color: '#7C4DFF' },
     { icon: <ExperimentOutlined />, label: '深度研究', desc: '一句话产出带来源报告', to: '/research', color: '#EB2F96' },
     { icon: <DeploymentUnitOutlined />, label: '图谱可视化', desc: '关系网络与时间线', to: '/graph', color: '#FF8A34' },
-    { icon: <ThunderboltOutlined />, label: '执行轨迹', desc: 'Loop 健康度与成本', to: '/traces', color: '#FAAD14' },
+    { icon: <ThunderboltOutlined />, label: '执行轨迹', desc: 'Agent 执行记录与成本', to: '/traces', color: '#FAAD14' },
   ]
 
   const allReady = hasChat && hasEmbedding
@@ -176,7 +177,11 @@ export default function HomePage() {
 
   // 欢迎引导:仅对「还没配好基础」的新用户首次弹一次,老用户不打扰
   useEffect(() => {
-    if (needsSetup && !localStorage.getItem(WELCOME_SEEN_KEY)) {
+    if (
+      needsSetup &&
+      !localStorage.getItem(WELCOME_SEEN_KEY) &&
+      !localStorage.getItem(LEGACY_WELCOME_SEEN_KEY)
+    ) {
       setWelcomeOpen(true)
     }
   }, [needsSetup])
@@ -194,7 +199,7 @@ export default function HomePage() {
     >
       <div style={{ textAlign: 'center', padding: '8px 4px' }}>
         <div style={{ fontSize: 34, marginBottom: 6 }}>👋</div>
-        <h2 style={{ margin: '0 0 8px', fontSize: 22 }}>欢迎使用彗记 Comet</h2>
+        <h2 style={{ margin: '0 0 8px', fontSize: 22 }}>欢迎使用 Meme</h2>
         <p style={{ color: '#475467', lineHeight: 1.85, margin: '0 0 14px' }}>
           这是你的个人 AI 知识库 + 记忆助手:和 AI 对话、把文档/网页存进知识库让它引用、
           它还会自动记住你聊过的事,越用越懂你。
@@ -241,7 +246,7 @@ export default function HomePage() {
       styles={{ body: { padding: 22 } }}
       title={
         <span>
-          🚀 {needsSetup ? '开始使用彗记' : '快速开始'}
+          🚀 {needsSetup ? '开始使用 Meme' : '快速开始'}
           <span style={{ color: '#98A2B3', fontWeight: 400, fontSize: 13, marginLeft: 10 }}>
             {finishedSteps}/{quickSteps.length} 已完成
           </span>
@@ -511,7 +516,7 @@ export default function HomePage() {
         <p className="dash-hero__sub">
           {needsSetup
             ? '只差一步就能开始:先配置一个对话大模型,下面有详细引导。'
-            : '欢迎使用彗记 Comet —— 你的个人 AI 知识库与记忆助手。'}
+            : '欢迎使用 Meme —— 你的个人 AI 知识库与记忆助手。'}
         </p>
       </div>
 

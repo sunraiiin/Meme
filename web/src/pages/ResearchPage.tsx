@@ -30,6 +30,7 @@ import {
 } from '@ant-design/icons'
 import { useNavigate } from 'react-router-dom'
 import MarkdownMessage from '@/components/MarkdownMessage'
+import { isFeatureEnabled } from '@/config/features'
 import {
   researchApi,
   streamResearch,
@@ -723,34 +724,36 @@ export default function ResearchPage() {
                 extra={
                   canManage && (
                     <Space size="small" wrap>
-                      <Dropdown
-                        menu={{
-                          items: [
-                            {
-                              key: 'md',
-                              icon: <DownloadOutlined />,
-                              label: '下载 Markdown',
-                              onClick: downloadMd,
-                            },
-                            {
-                              key: 'docx',
-                              icon: <FileWordOutlined />,
-                              label: exporting ? '导出中…' : '下载 Word',
-                              onClick: exportDocx,
-                            },
-                            {
-                              key: 'print',
-                              icon: <PrinterOutlined />,
-                              label: '打印 / 存为 PDF',
-                              onClick: printReport,
-                            },
-                          ],
-                        }}
-                      >
-                        <Button icon={<DownloadOutlined />}>
-                          下载 <DownOutlined />
-                        </Button>
-                      </Dropdown>
+                      {isFeatureEnabled('reportExport') && (
+                        <Dropdown
+                          menu={{
+                            items: [
+                              {
+                                key: 'md',
+                                icon: <DownloadOutlined />,
+                                label: '下载 Markdown',
+                                onClick: downloadMd,
+                              },
+                              {
+                                key: 'docx',
+                                icon: <FileWordOutlined />,
+                                label: exporting ? '导出中…' : '下载 Word',
+                                onClick: exportDocx,
+                              },
+                              {
+                                key: 'print',
+                                icon: <PrinterOutlined />,
+                                label: '打印 / 存为 PDF',
+                                onClick: printReport,
+                              },
+                            ],
+                          }}
+                        >
+                          <Button icon={<DownloadOutlined />}>
+                            下载 <DownOutlined />
+                          </Button>
+                        </Dropdown>
+                      )}
                       {currentId && !running && (
                         <Button
                           icon={<HistoryOutlined />}
