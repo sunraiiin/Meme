@@ -36,6 +36,21 @@ import { FileTypeIcon, StatusTag, formatSize } from './knowledge/helpers'
 const { Dragger } = Upload
 const { Search } = Input
 
+const IMAGE_STATUS_META: Record<
+  ImageItem['status'],
+  { color: 'default' | 'processing' | 'success' | 'error'; text: string }
+> = {
+  pending: { color: 'default', text: '待处理' },
+  processing: { color: 'processing', text: '识别中' },
+  done: { color: 'success', text: '已完成' },
+  failed: { color: 'error', text: '识别失败' },
+}
+
+function ImageStatusTag({ status }: { status: ImageItem['status'] }) {
+  const meta = IMAGE_STATUS_META[status]
+  return <Tag color={meta.color}>{meta.text}</Tag>
+}
+
 export default function KnowledgeDetailPage() {
   const { kbId = '' } = useParams()
   const navigate = useNavigate()
@@ -579,9 +594,19 @@ function ImageTab({ kbId }: { kbId: string }) {
                   />
                 </div>
                 <div className="kb-img-foot">
-                  <span className="kb-img-name" title={img.file_name}>
-                    {img.file_name}
-                  </span>
+                  <div style={{ minWidth: 0, flex: 1 }}>
+                    <span className="kb-img-name" title={img.file_name}>
+                      {img.file_name}
+                    </span>
+                    <div style={{ marginTop: 4 }}>
+                      <Space size={4} wrap>
+                        <ImageStatusTag status={img.status} />
+                        {img.status === 'done' && img.scene && (
+                          <Tag color="success">{img.scene}</Tag>
+                        )}
+                      </Space>
+                    </div>
+                  </div>
                   <Popconfirm
                     title="删除图片"
                     description="删除后不可恢复，确定吗？"
@@ -609,7 +634,10 @@ function ImageTab({ kbId }: { kbId: string }) {
                     {img.file_name}
                   </div>
                   <div className="kb-row-meta">
-                    <span>{img.scene || '识别中'}</span>
+                    <Space size={4} wrap>
+                      <ImageStatusTag status={img.status} />
+                      {img.status === 'done' && img.scene && <span>{img.scene}</span>}
+                    </Space>
                   </div>
                 </div>
                 <div className="kb-row-actions">
