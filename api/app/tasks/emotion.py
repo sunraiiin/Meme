@@ -13,6 +13,7 @@ from app.celery_app import celery_app
 from app.config import settings
 from app.core.emotion.aggregator import aggregate_profile
 from app.core.emotion.analyzer import analyze_emotion
+from app.core.llm.client import close_llm_client
 from app.core.llm.resolver import get_client_for_type
 from app.core.logging import get_logger
 from app.db.postgres import create_task_engine
@@ -36,6 +37,7 @@ async def _run(
         async with session_maker() as session:
             await _analyze(session, user_id, text, conversation_id, message_id)
     finally:
+        await close_llm_client()
         await engine.dispose()
 
 

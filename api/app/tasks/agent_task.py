@@ -19,6 +19,7 @@ import app.models  # noqa: F401  确保 ORM 模型注册
 from app.celery_app import celery_app
 from app.config import settings
 from app.core.agent.research.engine import run_research
+from app.core.llm.client import close_llm_client
 from app.core.logging import get_logger
 from app.db.postgres import create_task_engine
 from app.models.agent_task_model import (
@@ -96,6 +97,7 @@ async def _run_task(task_id: str) -> None:
             await redis.delete(lock_key)
         except Exception:  # noqa: BLE001
             pass
+        await close_llm_client()
         try:
             await redis.aclose()
         except Exception:  # noqa: BLE001

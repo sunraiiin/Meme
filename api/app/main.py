@@ -7,6 +7,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.config import settings
 from app.controllers.router import api_router
 from app.core.exceptions import register_exception_handlers
+from app.core.llm.client import close_llm_client
 from app.core.logging import get_logger, setup_logging
 from app.core.request_context import RequestContextMiddleware
 from app.db import elastic, neo4j, postgres, redis
@@ -57,6 +58,7 @@ async def lifespan(_: FastAPI):
     await elastic.close()
     await neo4j.close()
     await redis.close()
+    await close_llm_client()
     logger.info("%s 已关闭，连接池释放完成", settings.app_name)
 
 

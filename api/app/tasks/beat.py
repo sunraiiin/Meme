@@ -11,6 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 import app.models  # noqa: F401  确保 ORM 模型注册
 from app.celery_app import celery_app
+from app.core.llm.client import close_llm_client
 from app.core.logging import get_logger
 from app.db.postgres import create_task_engine
 from app.models.user_model import User
@@ -40,6 +41,7 @@ async def _run() -> int:
                 except Exception as e:
                     logger.warning("用户 %s 每日回顾生成失败: %s", uid, e)
     finally:
+        await close_llm_client()
         await engine.dispose()
     logger.info("每日回顾批量生成完成: %d 个用户", count)
     return count
@@ -77,6 +79,7 @@ async def _run_clustering() -> int:
                 except Exception as e:
                     logger.warning("用户 %s 全量聚类失败: %s", uid, e)
     finally:
+        await close_llm_client()
         await engine_db.dispose()
         await neo4j.close()
     logger.info("全量社区聚类完成: %d 个用户", count)
@@ -115,6 +118,7 @@ async def _run_consolidation() -> int:
                 except Exception as e:
                     logger.warning("用户 %s 记忆巩固失败: %s", uid, e)
     finally:
+        await close_llm_client()
         await engine_db.dispose()
         await neo4j.close()
     logger.info("记忆巩固批量完成: %d 个用户", count)
@@ -158,6 +162,7 @@ async def _run_reflection() -> int:
                 except Exception as e:
                     logger.warning("用户 %s 反思失败: %s", uid, e)
     finally:
+        await close_llm_client()
         await engine_db.dispose()
         await neo4j.close()
     logger.info("反思批量完成: %d 个用户", count)
@@ -192,6 +197,7 @@ async def _run_reflection_for_user(user_id: str) -> dict:
             )
             return await engine.run(user_id)
     finally:
+        await close_llm_client()
         await engine_db.dispose()
         await neo4j.close()
 

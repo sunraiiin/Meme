@@ -8,6 +8,8 @@ V0.0.5 ③:每个对外网络调用自动包一层 `llm_call` span,记录 model 
 """
 import asyncio
 import os
+import threading
+import weakref
 
 import httpx
 
@@ -36,26 +38,34 @@ _RETRY_STATUS = {429, 500, 502, 503, 504}
 _EMBED_BATCH_SIZE = max(1, int(os.getenv("EMBED_BATCH_SIZE", "10")))
 _EMBED_CONCURRENCY = max(1, int(os.getenv("EMBED_CONCURRENCY", "8")))
 
-# 进程级共享 HTTP 客户端：复用连接池，避免每次请求重建 TCP/TLS。
-# 评测上万次嵌入调用时，握手开销累积可观，复用后显著提速。
-_shared_client: httpx.AsyncClient | None = None
+# 按事件循环隔离的共享 HTTP 客户端：复用同一循环内的连接池，
+# 同时避免 Celery 的不同任务线程把 AsyncClient 交叉绑定到别的循环。
+# WeakKeyDictionary 让已结束的事件循环不会被客户端缓存长期持有。
+_shared_clients: weakref.WeakKeyDictionary[
+    asyncio.AbstractEventLoop, httpx.AsyncClient
+] = weakref.WeakKeyDictionary()
+_shared_clients_lock = threading.Lock()
 
 
 def _get_shared_client() -> httpx.AsyncClient:
-    global _shared_client
-    if _shared_client is None or _shared_client.is_closed:
-        _shared_client = httpx.AsyncClient(
-            limits=httpx.Limits(max_connections=100, max_keepalive_connections=20),
-        )
-    return _shared_client
+    loop = asyncio.get_running_loop()
+    with _shared_clients_lock:
+        client = _shared_clients.get(loop)
+        if client is None or client.is_closed:
+            client = httpx.AsyncClient(
+                limits=httpx.Limits(max_connections=100, max_keepalive_connections=20),
+            )
+            _shared_clients[loop] = client
+        return client
 
 
 async def close_llm_client() -> None:
-    """关闭共享 HTTP 客户端（应用/评测退出时调用）。"""
-    global _shared_client
-    if _shared_client is not None and not _shared_client.is_closed:
-        await _shared_client.aclose()
-    _shared_client = None
+    """关闭当前事件循环使用的共享 HTTP 客户端。"""
+    loop = asyncio.get_running_loop()
+    with _shared_clients_lock:
+        client = _shared_clients.pop(loop, None)
+    if client is not None and not client.is_closed:
+        await client.aclose()
 
 
 async def _post_with_retry(

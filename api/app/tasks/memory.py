@@ -10,6 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 import app.models  # noqa: F401  确保所有 ORM 模型注册到 metadata
 from app.celery_app import celery_app
+from app.core.llm.client import close_llm_client
 from app.core.llm.resolver import get_client_for_type
 from app.core.logging import get_logger
 from app.core.memory.extraction.orchestrator import run_extraction
@@ -33,6 +34,7 @@ async def _run(memory_id: str) -> None:
         async with session_maker() as session:
             await _extract(session, mem_uuid)
     finally:
+        await close_llm_client()
         await engine.dispose()
         # 关闭本任务事件循环内创建的 Neo4j 驱动
         await neo4j.close()
