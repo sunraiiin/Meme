@@ -11,6 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 import app.models  # noqa: F401  确保所有 ORM 模型注册到 metadata
 from app.celery_app import celery_app
+from app.core.llm.client import close_llm_client
 from app.core.llm.resolver import get_optional_client_for_type
 from app.core.logging import get_logger
 from app.core.music import migu_client
@@ -31,6 +32,7 @@ async def _run(song_id: str) -> None:
         async with session_maker() as session:
             await _process(session, song_id)
     finally:
+        await close_llm_client()
         await engine.dispose()
 
 
