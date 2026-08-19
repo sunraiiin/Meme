@@ -15,7 +15,7 @@ from app.core.logging import get_logger
 from app.core.rag.classifier import classify_content
 from app.core.rag.es_index import CHUNK_TYPE_IMAGE
 from app.core.rag.es_store import build_chunk_doc, bulk_index, delete_by_source
-from app.core.rag.image_describe import describe_image
+from app.core.rag.image_describe import build_searchable_text, describe_image
 from app.core.storage import get_storage
 from app.db import elastic
 from app.db.postgres import create_task_engine
@@ -66,14 +66,14 @@ async def _process(session: AsyncSession, image_id: str, img_uuid: uuid.UUID) ->
         img.scene = info["scene"]
 
         # 描述文本向量化后写 ES（可被搜索）
-        searchable = "\n".join(
-            filter(None, [info["description"], info["ocr_text"], info["scene"]])
-        )
+        searchable = build_searchable_text(info)
+        await delete_by_source(str(img.user_id), image_id)
+        if not searchable.strip():
+            raise ValueError("多模态模型未返回可用于检索的图片内容")
         if searchable.strip():
             embed_client = await get_client_for_type(session, img.user_id, "embedding")
             vector = await embed_client.embed_one(searchable)
             user_id = str(img.user_id)
-            await delete_by_source(user_id, image_id)
             await bulk_index(
                 [
                     build_chunk_doc(
