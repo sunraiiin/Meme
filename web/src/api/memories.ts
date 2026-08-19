@@ -52,6 +52,7 @@ export interface MemoryHit {
   score: number
   reliability_score?: number
   confidence?: number
+  importance?: number
   memory_layer?: string
   relations: MemoryRelation[]
 }
