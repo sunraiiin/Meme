@@ -70,6 +70,25 @@ def _is_uncertain(confidence: object, threshold: float | None = None) -> bool:
     return _float(confidence, _DEFAULT_CONFIDENCE) < threshold
 
 
+def _relation_payload(row: dict) -> dict:
+    """统一整理有向关系，兼容旧查询返回的 entity_name 字段。"""
+    source_text = row.get("source_text") or ""
+    return {
+        "subject_id": row.get("subject_id") or row.get("entity_id"),
+        "subject_name": row.get("subject_name") or row.get("entity_name"),
+        "predicate": row.get("predicate"),
+        "object_id": row.get("object_id"),
+        "object_name": row.get("object_name"),
+        "object_type": row.get("object_type"),
+        "direction": row.get("direction") or "outgoing",
+        "statement_id": row.get("statement_id"),
+        "source_text": source_text,
+        "evidence_status": "available" if source_text else "missing",
+        "confidence": _float(row.get("confidence"), _DEFAULT_CONFIDENCE),
+        "importance": _float(row.get("importance"), 0.5),
+    }
+
+
 async def search_memory(
     *,
     embed_client: LLMClient,
@@ -84,7 +103,7 @@ async def search_memory(
 ) -> list[dict]:
     """记忆检索：返回 top_k 个相关实体，每个带其一跳关系（关联事实）。
 
-    结果结构：{id, name, type, description, aliases, score, relations:[{predicate, object_name, source_text}]}
+    结果结构：{id, name, type, description, aliases, score, relations:[{subject_name, predicate, object_name, source_text, direction}]}
 
     min_vector_score 不为 None 时启用「绝对相关度门控」（精确导向，用于全局搜索）：
     只保留全文命中 或 向量余弦相似度 ≥ 阈值的实体。
@@ -126,10 +145,12 @@ async def search_memory(
     # 3.5 精确模式（全局搜索）：纯语义余弦门控
     # Neo4j 向量索引返回的 score 即 cosine 相似度；只保留 ≥ 阈值的，按余弦排序、分数用余弦
     if min_vector_score is not None:
+        # 精确搜索仍允许全文命中通过；否则别名/中文姓名只能被全文索引找到，
+        # 却会因为没有对应的向量命中而被错误丢弃。
         kept = {
-            eid: vec_scores[eid]
+            eid: vec_scores[eid] if eid in vec_scores else ft_scores.get(eid, 0.0)
             for eid in all_hits
-            if vec_scores.get(eid, 0.0) >= min_vector_score
+            if eid in ft_hits or vec_scores.get(eid, 0.0) >= min_vector_score
         }
         if not kept:
             return []
@@ -152,14 +173,7 @@ async def search_memory(
         for row in neighbor_rows:
             eid = row.get("entity_id")
             if eid in relations_by_entity and row.get("predicate"):
-                relations_by_entity[eid].append({
-                    "predicate": row.get("predicate"),
-                    "object_name": row.get("object_name"),
-                    "object_type": row.get("object_type"),
-                    "source_text": row.get("source_text"),
-                    "confidence": _float(row.get("confidence"), _DEFAULT_CONFIDENCE),
-                    "importance": _float(row.get("importance"), 0.5),
-                })
+                relations_by_entity[eid].append(_relation_payload(row))
         results: list[dict] = []
         for eid, score, reliability_score in ranked:
             src = all_hits[eid]
@@ -169,6 +183,8 @@ async def search_memory(
                 "type": src.get("type"),
                 "description": src.get("description"),
                 "aliases": src.get("aliases") or [],
+                "identity_key": src.get("identity_key"),
+                "is_self": bool(src.get("is_self", False)),
                 "importance": round(float(src.get("importance", 0.5) or 0.5), 3),
                 "confidence": round(_float(src.get("confidence"), _DEFAULT_CONFIDENCE), 3),
                 "memory_layer": src.get("memory_layer") or "short_term",
@@ -210,14 +226,7 @@ async def search_memory(
     for row in neighbor_rows:
         eid = row.get("entity_id")
         if eid in relations_by_entity and row.get("predicate"):
-            relations_by_entity[eid].append({
-                "predicate": row.get("predicate"),
-                "object_name": row.get("object_name"),
-                "object_type": row.get("object_type"),
-                "source_text": row.get("source_text"),
-                "confidence": _float(row.get("confidence"), _DEFAULT_CONFIDENCE),
-                "importance": _float(row.get("importance"), 0.5),
-            })
+            relations_by_entity[eid].append(_relation_payload(row))
 
     results: list[dict] = []
     for eid, score, reliability_score in ranked:
@@ -228,6 +237,8 @@ async def search_memory(
             "type": src.get("type"),
             "description": src.get("description"),
             "aliases": src.get("aliases") or [],
+            "identity_key": src.get("identity_key"),
+            "is_self": bool(src.get("is_self", False)),
             "importance": round(float(src.get("importance", 0.5) or 0.5), 3),
             "confidence": round(_float(src.get("confidence"), _DEFAULT_CONFIDENCE), 3),
             "memory_layer": src.get("memory_layer") or "short_term",
@@ -248,9 +259,15 @@ def format_memory_context(results: list[dict]) -> str:
         head = f"{prefix}{r['name']}（{r['type']}）：{r.get('description') or ''}".rstrip("：")
         lines.append(head)
         for rel in r.get("relations", []):
+            subject = rel.get("subject_name") or r["name"]
             obj = rel.get("object_name") or ""
             rel_prefix = "    · 待确认：" if _is_uncertain(rel.get("confidence")) else "    · "
-            lines.append(f"{rel_prefix}{r['name']} {rel['predicate']} {obj}")
+            line = f"{rel_prefix}{subject} {rel['predicate']} {obj}"
+            if rel.get("source_text"):
+                line += f"〔依据：{rel['source_text']}〕"
+            else:
+                line += "〔证据缺失〕"
+            lines.append(line)
     return "\n".join(lines)
 
 
