@@ -12,6 +12,7 @@ from datetime import datetime
 from app.core.llm.client import LLMClient
 from app.core.logging import get_logger
 from app.core.memory.extraction import dedup, embedder, triplet_extractor
+from app.core.memory.extraction.identity import normalize_entity_pool
 from app.core.memory.extraction.models import ExtractedEvent, ExtractedTriplet
 from app.core.memory.graph_models import (
     SOURCE_MANUAL,
@@ -154,6 +155,13 @@ async def run_extraction(
                 pending_events.append((ev, chunk_name_map))
 
     stats.statement_count = len(statements)
+
+    # 身份归一化必须发生在向量化、批内去重和图侧融合之前；否则“用户”
+    # 与姓名/昵称已经被当成不同节点，后续去重不会再跨类型修正。
+    repo = MemoryGraphRepository()
+    entity_pool, identity_redirect = await normalize_entity_pool(
+        repo=repo, user_id=user_id, text=text, entities=entity_pool
+    )
     if not entity_pool:
         # 没抽到实体也写来源 + 陈述（保留溯源），关系/事件为空
         await _persist(
@@ -170,13 +178,13 @@ async def run_extraction(
     # 5. 批内去重 → id 重定向
     deduped, redirect1 = await dedup.dedup_within_batch(chat_client, entity_pool)
     # 6. 与图谱已有实体二层融合
-    repo = MemoryGraphRepository()
     final_entities, redirect2 = await dedup.merge_with_graph(
         chat_client, repo, user_id, deduped
     )
 
     # 合并两层重定向：原始 EntityNode.id → 最终落库 id
     def resolve(eid: str) -> str:
+        eid = identity_redirect.get(eid, eid)
         eid = redirect1.get(eid, eid)
         eid = redirect2.get(eid, eid)
         return eid

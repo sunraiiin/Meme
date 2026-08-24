@@ -30,6 +30,8 @@ _CONSTRAINTS = [
     f"FOR (n:{LABEL_STATEMENT}) REQUIRE n.id IS UNIQUE",
     f"CREATE CONSTRAINT entity_id_unique IF NOT EXISTS "
     f"FOR (n:{LABEL_ENTITY}) REQUIRE n.id IS UNIQUE",
+    f"CREATE CONSTRAINT entity_identity_key_unique IF NOT EXISTS "
+    f"FOR (n:{LABEL_ENTITY}) REQUIRE (n.user_id, n.identity_key) IS UNIQUE",
     f"CREATE CONSTRAINT event_id_unique IF NOT EXISTS "
     f"FOR (n:{LABEL_EVENT}) REQUIRE n.id IS UNIQUE",
     f"CREATE CONSTRAINT community_id_unique IF NOT EXISTS "
@@ -44,6 +46,8 @@ _PROPERTY_INDEXES = [
     f"CREATE INDEX event_user_idx IF NOT EXISTS FOR (n:{LABEL_EVENT}) ON (n.user_id)",
     f"CREATE INDEX statement_user_idx IF NOT EXISTS FOR (n:{LABEL_STATEMENT}) ON (n.user_id)",
     f"CREATE INDEX entity_name_idx IF NOT EXISTS FOR (n:{LABEL_ENTITY}) ON (n.name)",
+    f"CREATE INDEX entity_identity_key_idx IF NOT EXISTS "
+    f"FOR (n:{LABEL_ENTITY}) ON (n.identity_key)",
     # 记忆分层 / 重要度：巩固任务与检索排序的过滤维度
     f"CREATE INDEX entity_layer_idx IF NOT EXISTS FOR (n:{LABEL_ENTITY}) ON (n.memory_layer)",
     f"CREATE INDEX statement_layer_idx IF NOT EXISTS FOR (n:{LABEL_STATEMENT}) ON (n.memory_layer)",

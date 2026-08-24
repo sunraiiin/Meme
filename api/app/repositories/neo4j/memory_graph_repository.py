@@ -94,6 +94,8 @@ class MemoryGraphRepository:
             "type": n.type,
             "description": n.description,
             "aliases": n.aliases,
+            "identity_key": n.identity_key,
+            "is_self": n.is_self,
             "name_embedding": n.name_embedding,
             "community_id": n.community_id,
             "importance": n.importance,
@@ -210,6 +212,17 @@ class MemoryGraphRepository:
                 cq.ENTITY_LIST_BY_TYPE, user_id=user_id, type=type_
             )
             return [dict(record) async for record in result]
+
+    async def get_self_entity(
+        self, user_id: str, identity_key: str
+    ) -> dict[str, Any] | None:
+        """取用户稳定 self 节点；兼容尚未迁移的旧「用户」实体。"""
+        async with self._driver.session() as session:
+            result = await session.run(
+                cq.ENTITY_GET_SELF, user_id=user_id, identity_key=identity_key
+            )
+            record = await result.single()
+            return dict(record) if record else None
 
     async def get_entity_by_name(self, user_id: str, name: str) -> dict[str, Any] | None:
         async with self._driver.session() as session:
