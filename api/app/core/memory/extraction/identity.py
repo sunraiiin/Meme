@@ -137,7 +137,7 @@ def should_resolve_to_self(
     if name in SELF_SURFACE_NAMES:
         return True
     if name in signals.all_names:
-        return True
+        return not _is_external_name_context(text, name)
     if name.casefold() in {item.casefold() for item in known_names}:
         return not _is_external_name_context(text, name)
     return False
