@@ -134,6 +134,9 @@ class EntityNode(BaseModel):
     type: str  # 受控实体类型中文标签
     description: str = ""
     aliases: list[str] = Field(default_factory=list)
+    # 稳定身份：个人 self 节点使用 identity_key，不随展示名称变化。
+    identity_key: str | None = None
+    is_self: bool = False
     name_embedding: list[float] | None = None
     community_id: str | None = None
     # 记忆动力学

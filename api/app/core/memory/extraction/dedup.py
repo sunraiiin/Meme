@@ -144,6 +144,43 @@ async def merge_with_graph(
             cache[ent.type] = await repo.list_entities_by_type(user_id, ent.type)
         existing = cache[ent.type]
 
+        # self 使用稳定 identity_key 优先匹配，不能因为展示名称从「用户」变成
+        # 「林夕」就重新创建第二个本人节点。
+        if ent.is_self or ent.identity_key:
+            self_match = next(
+                (
+                    r
+                    for r in existing
+                    if r.get("identity_key") == ent.identity_key
+                    or bool(r.get("is_self"))
+                ),
+                None,
+            )
+            if self_match is not None:
+                existing_node = EntityNode(
+                    id=self_match["id"], user_id=user_id,
+                    name=self_match.get("name", "用户"), type=ent.type,
+                    description=self_match.get("description") or "",
+                    aliases=self_match.get("aliases") or [], mention_count=0,
+                    identity_key=ent.identity_key or self_match.get("identity_key"),
+                    is_self=True,
+                )
+                previous_name = existing_node.name
+                _merge_into(existing_node, ent)
+                if ent.name and ent.name not in {"我", "用户", "本人", "自己"}:
+                    if previous_name and previous_name != ent.name:
+                        existing_node.aliases.append(previous_name)
+                    existing_node.name = ent.name
+                    existing_node.aliases = sorted(
+                        {a for a in existing_node.aliases if a and a != existing_node.name}
+                    )
+                existing_node.name_embedding = ent.name_embedding or self_match.get(
+                    "name_embedding"
+                )
+                redirect[ent.id] = existing_node.id
+                out.append(existing_node)
+                continue
+
         # 同名同类型直接复用已有图节点，不问 LLM。
         # 关键：保证「用户」等稳定自指实体跨多次萃取只有一个图节点，
         # 避免 LLM 非确定性判定把同名实体反复判为不同而重复建节点。
@@ -157,6 +194,8 @@ async def merge_with_graph(
                 id=exact["id"], user_id=user_id, name=exact.get("name", ""),
                 type=ent.type, description=exact.get("description") or "",
                 aliases=exact.get("aliases") or [], mention_count=0,
+                identity_key=exact.get("identity_key"),
+                is_self=bool(exact.get("is_self")),
             )
             _merge_into(existing_node, ent)
             existing_node.name_embedding = ent.name_embedding or exact.get("name_embedding")
@@ -187,6 +226,8 @@ async def merge_with_graph(
             id=best["id"], user_id=user_id, name=best.get("name", ""),
             type=ent.type, description=best.get("description") or "",
             aliases=best.get("aliases") or [], mention_count=0,
+            identity_key=best.get("identity_key"),
+            is_self=bool(best.get("is_self")),
         )
         decision = await _judge_same(client, existing_node, ent, ctx)
         if decision.same_entity and decision.confidence >= _MERGE_CONFIDENCE:

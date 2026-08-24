@@ -71,6 +71,8 @@ SET n.user_id = row.user_id,
     n.type = row.type,
     n.description = row.description,
     n.aliases = row.aliases,
+    n.identity_key = row.identity_key,
+    n.is_self = coalesce(row.is_self, false),
     n.name_embedding = row.name_embedding,
     n.community_id = row.community_id,
     n.importance = CASE
@@ -157,7 +159,26 @@ ENTITY_LIST_BY_TYPE = """
 MATCH (e:Entity {user_id: $user_id, type: $type})
 RETURN e.id AS id, e.name AS name, e.type AS type,
        e.description AS description, e.aliases AS aliases,
+       e.identity_key AS identity_key, coalesce(e.is_self, false) AS is_self,
        e.name_embedding AS name_embedding
+"""
+
+ENTITY_GET_SELF = """
+MATCH (e:Entity {user_id: $user_id})
+WHERE e.identity_key = $identity_key
+   OR coalesce(e.is_self, false) = true
+   OR (e.name = '用户' AND e.type = '生命体')
+RETURN e.id AS id, e.name AS name, e.type AS type,
+       e.description AS description, e.aliases AS aliases,
+       e.identity_key AS identity_key, coalesce(e.is_self, false) AS is_self,
+       coalesce(e.importance, 0.5) AS importance,
+       coalesce(e.confidence, 0.8) AS confidence
+ORDER BY CASE
+    WHEN e.identity_key = $identity_key THEN 0
+    WHEN coalesce(e.is_self, false) = true THEN 1
+    ELSE 2
+END
+LIMIT 1
 """
 
 ENTITY_GET_BY_NAME = """
@@ -286,6 +307,7 @@ WITH e, collect({
 }) AS rels
 RETURN e.id AS id, e.name AS name, e.type AS type,
        e.description AS description, e.aliases AS aliases,
+       e.identity_key AS identity_key, coalesce(e.is_self, false) AS is_self,
        e.created_at AS created_at,
        coalesce(e.importance, 0.5) AS importance,
        coalesce(e.confidence, 0.8) AS confidence,
@@ -344,6 +366,7 @@ ENTITY_SNAPSHOT = """
 MATCH (e:Entity {user_id: $user_id, id: $entity_id})
 RETURN e.id AS id, e.name AS name, e.type AS type,
        e.description AS description, e.aliases AS aliases,
+       e.identity_key AS identity_key, coalesce(e.is_self, false) AS is_self,
        coalesce(e.confidence, 0.8) AS confidence,
        coalesce(e.memory_layer, 'short_term') AS memory_layer,
        coalesce(e.human_verified, false) AS human_verified
@@ -399,6 +422,7 @@ COMMUNITY_MEMBERS = """
 MATCH (e:Entity {user_id: $user_id, community_id: $community_id})
 RETURN e.id AS id, e.name AS name, e.type AS type,
        e.description AS description, e.aliases AS aliases,
+       e.identity_key AS identity_key, coalesce(e.is_self, false) AS is_self,
        e.name_embedding AS name_embedding
 """
 
@@ -531,6 +555,8 @@ RETURN e.id AS id, e.name AS name, e.type AS type,
        coalesce(e.access_count, 0) AS access_count,
        coalesce(e.mention_count, 1) AS mention_count,
        coalesce(e.aliases, []) AS aliases,
+       e.identity_key AS identity_key,
+       coalesce(e.is_self, false) AS is_self,
        coalesce(e.core_facts, []) AS core_facts,
        coalesce(e.traits, []) AS traits
 """
@@ -560,6 +586,8 @@ RETURN n.id AS id, kind AS kind,
        coalesce(n.access_count, 0) AS access_count,
        coalesce(n.mention_count, 1) AS mention_count,
        coalesce(n.aliases, []) AS aliases,
+       n.identity_key AS identity_key,
+       coalesce(n.is_self, false) AS is_self,
        coalesce(n.core_facts, []) AS core_facts,
        coalesce(n.traits, []) AS traits
 """
