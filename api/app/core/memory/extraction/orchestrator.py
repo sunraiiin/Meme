@@ -201,6 +201,7 @@ async def run_extraction(
 
     # 8. 三元组 → RELATION 边
     relations: list[RelationEdge] = []
+    statement_text_by_id = {statement.id: statement.statement for statement in statements}
     for stmt_id, trip, idx_map in pending_triplets:
         subj = idx_map.get(trip.subject_id)
         obj = idx_map.get(trip.object_id)
@@ -214,7 +215,8 @@ async def run_extraction(
             user_id=user_id, source_id=sid, target_id=oid,
             predicate=normalize_predicate(trip.predicate),
             predicate_surface=trip.predicate_surface or "",
-            source_text="", statement_id=stmt_id, value=trip.value,
+            source_text=statement_text_by_id.get(stmt_id, ""),
+            statement_id=stmt_id, value=trip.value,
             valid_at=_parse_dt(trip.valid_at), invalid_at=_parse_dt(trip.invalid_at),
             importance=trip.importance, confidence=trip.confidence,
         ))

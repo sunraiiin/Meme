@@ -127,8 +127,15 @@ MERGE (a)-[r:RELATION {predicate: row.predicate, target_id: row.target_id}]->(b)
 SET r.id = row.id,
     r.user_id = row.user_id,
     r.predicate_surface = row.predicate_surface,
-    r.source_text = row.source_text,
-    r.statement_id = row.statement_id,
+    // 保留已有证据；历史关系为空时，用本次萃取的陈述补齐。
+    r.source_text = CASE
+        WHEN coalesce(r.source_text, '') <> '' THEN r.source_text
+        ELSE coalesce(row.source_text, '')
+    END,
+    r.statement_id = CASE
+        WHEN r.statement_id IS NOT NULL THEN r.statement_id
+        ELSE row.statement_id
+    END,
     r.value = row.value,
     r.valid_at = row.valid_at,
     r.invalid_at = row.invalid_at,
@@ -200,6 +207,7 @@ YIELD node, score
 WHERE node.user_id = $user_id
 RETURN node.id AS id, node.name AS name, node.type AS type,
        node.description AS description, node.aliases AS aliases,
+       node.identity_key AS identity_key, coalesce(node.is_self, false) AS is_self,
        coalesce(node.importance, 0.5) AS importance,
        coalesce(node.confidence, 0.8) AS confidence,
        coalesce(node.memory_layer, 'short_term') AS memory_layer,
@@ -214,6 +222,7 @@ YIELD node, score
 WHERE node.user_id = $user_id
 RETURN node.id AS id, node.name AS name, node.type AS type,
        node.description AS description, node.aliases AS aliases,
+       node.identity_key AS identity_key, coalesce(node.is_self, false) AS is_self,
        coalesce(node.importance, 0.5) AS importance,
        coalesce(node.confidence, 0.8) AS confidence,
        coalesce(node.memory_layer, 'short_term') AS memory_layer,
@@ -289,12 +298,34 @@ RETURN e.id AS id
 ENTITY_NEIGHBORS = """
 MATCH (e:Entity {user_id: $user_id})
 WHERE e.id IN $entity_ids
-OPTIONAL MATCH (e)-[r:RELATION]->(o:Entity)
+OPTIONAL MATCH (e)-[r:RELATION]-(o:Entity {user_id: $user_id})
+OPTIONAL MATCH (st:Statement {user_id: $user_id, id: r.statement_id})
 RETURN e.id AS entity_id, e.name AS entity_name,
-       r.predicate AS predicate, r.source_text AS source_text,
+       CASE WHEN r IS NULL THEN NULL
+            WHEN startNode(r).id = e.id THEN startNode(r).id
+            ELSE endNode(r).id END AS subject_id,
+       CASE WHEN r IS NULL THEN NULL
+            WHEN startNode(r).id = e.id THEN startNode(r).name
+            ELSE endNode(r).name END AS subject_name,
+       CASE WHEN r IS NULL THEN NULL
+            WHEN startNode(r).id = e.id THEN endNode(r).id
+            ELSE startNode(r).id END AS object_id,
+       CASE WHEN r IS NULL THEN NULL
+            WHEN startNode(r).id = e.id THEN endNode(r).name
+            ELSE startNode(r).name END AS object_name,
+       CASE WHEN r IS NULL THEN NULL
+            WHEN startNode(r).id = e.id THEN endNode(r).type
+            ELSE startNode(r).type END AS object_type,
+       CASE WHEN r IS NULL THEN NULL
+            WHEN startNode(r).id = e.id THEN 'outgoing'
+            ELSE 'incoming' END AS direction,
+       r.predicate AS predicate,
+       CASE WHEN r.source_text IS NULL OR r.source_text = ''
+            THEN st.statement ELSE r.source_text END AS source_text,
+       r.statement_id AS statement_id,
        coalesce(r.importance, 0.5) AS importance,
        coalesce(r.confidence, 0.8) AS confidence,
-       o.id AS object_id, o.name AS object_name, o.type AS object_type
+       coalesce(e.is_self, false) AS matched_is_self
 """
 
 # ── 画像视图：列出用户全部实体（含每个实体的一跳出边关系，供卡片展示） ──

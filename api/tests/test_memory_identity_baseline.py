@@ -40,9 +40,10 @@ class MemoryIdentityBaselineTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual([entity.name for entity in deduped], ["用户", "林夕"])
         self.assertEqual(redirect, {})
 
-    def test_current_neighbor_query_only_reads_outgoing_relations(self):
-        self.assertIn("(e)-[r:RELATION]->(o:Entity)", cq.ENTITY_NEIGHBORS)
-        self.assertNotIn("(e)<-[r:RELATION]-(o:Entity)", cq.ENTITY_NEIGHBORS)
+    def test_neighbor_query_reads_both_relation_directions_with_evidence(self):
+        self.assertIn("(e)-[r:RELATION]-(o:Entity", cq.ENTITY_NEIGHBORS)
+        self.assertIn("startNode(r)", cq.ENTITY_NEIGHBORS)
+        self.assertIn("st:Statement", cq.ENTITY_NEIGHBORS)
 
     def test_identity_fixture_covers_required_ambiguity_classes(self):
         rows = json.loads(_IDENTITY_FIXTURE.read_text(encoding="utf-8"))

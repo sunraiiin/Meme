@@ -1,7 +1,12 @@
 import unittest
 import uuid
+from unittest.mock import patch
 
-from app.core.memory.retrieval.searcher import _rank_memory_hits, format_memory_context
+from app.core.memory.retrieval.searcher import (
+    _rank_memory_hits,
+    format_memory_context,
+    search_memory,
+)
 from app.services.memory_service import MemoryService
 
 
@@ -112,6 +117,47 @@ class MemoryContextFormattingTests(unittest.TestCase):
         self.assertNotIn("待确认", context)
         self.assertIn("Python", context)
 
+    def test_incoming_relation_keeps_original_subject_and_evidence(self):
+        context = format_memory_context(
+            [
+                {
+                    "name": "AI 应用工程",
+                    "type": "职业方向",
+                    "description": "",
+                    "confidence": 0.95,
+                    "relations": [
+                        {
+                            "subject_name": "林舟",
+                            "predicate": "目标是",
+                            "object_name": "AI 应用工程",
+                            "source_text": "我希望进入 AI 应用工程方向。",
+                            "confidence": 0.95,
+                        }
+                    ],
+                }
+            ]
+        )
+
+        self.assertIn("林舟 目标是 AI 应用工程", context)
+        self.assertIn("依据：我希望进入 AI 应用工程方向。", context)
+
+    def test_relation_without_source_is_explicitly_marked(self):
+        context = format_memory_context(
+            [
+                {
+                    "name": "Python",
+                    "type": "技能",
+                    "description": "",
+                    "confidence": 0.9,
+                    "relations": [
+                        {"predicate": "属于", "object_name": "后端开发", "confidence": 0.9}
+                    ],
+                }
+            ]
+        )
+
+        self.assertIn("证据缺失", context)
+
 
 class MemoryProfileConfidenceTests(unittest.IsolatedAsyncioTestCase):
     async def test_profile_includes_entity_and_relation_confidence(self):
@@ -150,6 +196,60 @@ class MemoryProfileConfidenceTests(unittest.IsolatedAsyncioTestCase):
 
         self.assertEqual(entity["confidence"], 0.7)
         self.assertEqual(entity["relations"][0]["confidence"], 0.65)
+
+
+class MemoryRetrievalRegressionTests(unittest.IsolatedAsyncioTestCase):
+    async def test_fulltext_alias_hit_survives_exact_search_without_vector_hit(self):
+        class _EmbedClient:
+            async def embed_one(self, query: str) -> list[float]:
+                return [0.1]
+
+        class _Repo:
+            async def search_entities_by_vector(self, user_id, vector, top_k):
+                raise RuntimeError("vector index unavailable in unit test")
+
+            async def search_entities_by_fulltext(self, user_id, query, top_k):
+                return [
+                    {
+                        "id": "self-1",
+                        "name": "林夕",
+                        "type": "生命体",
+                        "aliases": ["用户"],
+                        "identity_key": "self:user-1",
+                        "is_self": True,
+                        "score": 0.99,
+                    }
+                ]
+
+            async def bump_entity_access(self, user_id, entity_ids):
+                return None
+
+            async def get_entity_neighbors(self, user_id, entity_ids):
+                return [
+                    {
+                        "entity_id": "self-1",
+                        "subject_name": "林夕",
+                        "predicate": "目标是",
+                        "object_name": "AI 应用工程",
+                        "source_text": "我希望进入 AI 应用工程方向。",
+                        "direction": "outgoing",
+                    }
+                ]
+
+        with patch(
+            "app.core.memory.retrieval.searcher.MemoryGraphRepository",
+            return_value=_Repo(),
+        ):
+            results = await search_memory(
+                embed_client=_EmbedClient(),
+                user_id=uuid.uuid4(),
+                query="林夕",
+                min_vector_score=0.8,
+            )
+
+        self.assertEqual(len(results), 1)
+        self.assertTrue(results[0]["is_self"])
+        self.assertEqual(results[0]["relations"][0]["subject_name"], "林夕")
 
 
 if __name__ == "__main__":
