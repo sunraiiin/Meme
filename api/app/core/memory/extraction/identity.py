@@ -157,6 +157,17 @@ async def normalize_entity_pool(
     """
     signals = extract_identity_signals(text)
     existing = await repo.get_self_entity(user_id, self_identity_key(user_id))
+    # 兼容尚未迁移的图：用户第一次明确声明姓名时，优先复用同名的生命体
+    # 节点，避免在旧的“林舟/林夕”节点旁再创建一个新的 self。
+    if existing is None:
+        get_by_name = getattr(repo, "get_entity_by_name", None)
+        for candidate_name in reversed(signals.current_names):
+            if get_by_name is None:
+                break
+            candidate = await get_by_name(user_id, candidate_name)
+            if candidate and candidate.get("type") == "生命体":
+                existing = candidate
+                break
     existing_aliases = set(existing.get("aliases") or []) if existing else set()
     existing_name = (existing.get("name") or "") if existing else ""
     known_names = existing_aliases | ({existing_name} if existing_name else set())

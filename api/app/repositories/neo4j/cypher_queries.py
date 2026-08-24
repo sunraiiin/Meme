@@ -184,7 +184,11 @@ LIMIT 1
 ENTITY_GET_BY_NAME = """
 MATCH (e:Entity {user_id: $user_id, name: $name})
 RETURN e.id AS id, e.name AS name, e.type AS type,
-       e.description AS description, e.aliases AS aliases
+       e.description AS description, e.aliases AS aliases,
+       e.identity_key AS identity_key, coalesce(e.is_self, false) AS is_self
+ORDER BY CASE WHEN coalesce(e.is_self, false) = true THEN 0
+              WHEN e.type = '生命体' THEN 1
+              ELSE 2 END
 LIMIT 1
 """
 

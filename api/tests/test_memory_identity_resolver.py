@@ -10,15 +10,19 @@ from app.core.memory.graph_models import EntityNode
 
 
 class _Repo:
-    def __init__(self, self_entity=None, entities_by_type=None):
+    def __init__(self, self_entity=None, entities_by_type=None, by_name=None):
         self.self_entity = self_entity
         self.entities_by_type = entities_by_type or []
+        self.by_name = by_name or {}
 
     async def get_self_entity(self, user_id: str, identity_key: str):
         return self.self_entity
 
     async def list_entities_by_type(self, user_id: str, type_: str):
         return self.entities_by_type
+
+    async def get_entity_by_name(self, user_id: str, name: str):
+        return self.by_name.get(name)
 
 
 class MemoryIdentityResolverTests(unittest.IsolatedAsyncioTestCase):
@@ -142,6 +146,27 @@ class MemoryIdentityResolverTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(merged[0].name, "林夕")
         self.assertIn("用户", merged[0].aliases)
         self.assertEqual(redirect, {"self:u1": "self-existing"})
+
+    async def test_explicit_name_reuses_legacy_life_entity_before_creating_self(self):
+        legacy = {
+            "id": "legacy-name",
+            "name": "林夕",
+            "type": "生命体",
+            "aliases": [],
+            "description": "旧实体",
+        }
+        entity = EntityNode(user_id="u1", name="用户", type="生命体")
+
+        normalized, redirect = await normalize_entity_pool(
+            repo=_Repo(by_name={"林夕": legacy}),
+            user_id="u1",
+            text="我叫林夕。",
+            entities=[entity],
+        )
+
+        self.assertEqual(normalized[0].id, "legacy-name")
+        self.assertEqual(normalized[0].name, "林夕")
+        self.assertEqual(redirect[entity.id], "legacy-name")
 
 
 if __name__ == "__main__":
