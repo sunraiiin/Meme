@@ -65,7 +65,7 @@ async def lifespan(_: FastAPI):
 def create_app() -> FastAPI:
     app = FastAPI(
         title=f"{settings.app_name} API",
-        description="彗记 Comet — 个人 AI 知识库与记忆助手",
+        description="Meme — 个人 AI 知识库与记忆助手",
         version="0.1.0",
         lifespan=lifespan,
     )
