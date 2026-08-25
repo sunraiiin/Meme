@@ -159,11 +159,16 @@ class Tracer:
             attributes=attributes or {},
         )
         trace_token = _current_trace.set(record)
-        # trace 创建事件先入队(create 记录)
+        # trace 主记录必须先落库，避免业务消息已经带有 trace_id 但详情页查不到。
+        # 失败时仍保留异步队列兜底，不能让 tracing 故障影响正常业务。
         try:
-            get_recorder().push_trace_create(record)
+            await get_recorder().ensure_trace_persisted(record)
         except Exception as e:
-            logger.warning("trace 创建入队失败: %s", e)
+            logger.warning("trace 主记录同步落库失败，转入异步队列: %s", e)
+            try:
+                get_recorder().push_trace_create(record)
+            except Exception as enqueue_error:
+                logger.warning("trace 创建入队失败: %s", enqueue_error)
 
         try:
             yield _TraceCtx(record)
