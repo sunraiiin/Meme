@@ -30,6 +30,14 @@ async def _run(args: argparse.Namespace) -> None:
     print(json.dumps(result, ensure_ascii=False, indent=2))
 
 
+async def _run_and_close(args: argparse.Namespace) -> None:
+    try:
+        await _run(args)
+    finally:
+        await close_neo4j()
+        await close_postgres()
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description="执行已确认的 Meme 记忆身份迁移")
     parser.add_argument("user_id", help="用户 UUID")
@@ -42,11 +50,7 @@ def main() -> None:
     args = parser.parse_args()
     if not args.confirm:
         parser.error("身份迁移是写操作，必须显式传入 --confirm")
-    try:
-        asyncio.run(_run(args))
-    finally:
-        asyncio.run(close_neo4j())
-        asyncio.run(close_postgres())
+    asyncio.run(_run_and_close(args))
 
 
 if __name__ == "__main__":

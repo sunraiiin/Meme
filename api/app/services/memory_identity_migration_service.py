@@ -90,6 +90,19 @@ class MemoryIdentityMigrationService:
 
         uid = str(user_id)
         alias_ids = sorted({item for item in alias_entity_ids if item and item != canonical_entity_id})
+        operation_id = _operation_id(uid, canonical_entity_id, alias_ids, display_name)
+        if self.session is None:
+            raise BizError("身份迁移执行缺少数据库会话", code=3106, status_code=500)
+
+        # 幂等短路必须早于 active 目标校验：成功迁移后别名已 inactive，
+        # 重复执行应返回原审计，而不是把已完成操作误报为目标失效。
+        audit_repo = MemoryCurationRepository(self.session)
+        existing = await audit_repo.get_for_user(user_id, operation_id)
+        if existing and existing.status in {"executed", "undone"}:
+            return {"status": existing.status, "audit": _audit_dict(existing)}
+        if existing and existing.status in {"confirmed", "failed"}:
+            raise BizError("该身份迁移已有执行记录，请先检查审计状态", code=3107, status_code=409)
+
         entities = await self.repo.validator_entities(uid)
         relations = await self.repo.validator_relations(uid)
         active = {
@@ -134,17 +147,6 @@ class MemoryIdentityMigrationService:
                 for entity_id in [canonical_entity_id, *alias_ids]
             },
         }
-        operation_id = _operation_id(uid, canonical_entity_id, alias_ids, display_name)
-        if self.session is None:
-            raise BizError("身份迁移执行缺少数据库会话", code=3106, status_code=500)
-
-        audit_repo = MemoryCurationRepository(self.session)
-        existing = await audit_repo.get_for_user(user_id, operation_id)
-        if existing and existing.status in {"executed", "undone"}:
-            return {"status": existing.status, "audit": _audit_dict(existing)}
-        if existing and existing.status == "confirmed":
-            raise BizError("该身份迁移正在执行或已被占用", code=3107, status_code=409)
-
         record = await audit_repo.create_confirmed(
             user_id=user_id,
             plan_id=operation_id,
