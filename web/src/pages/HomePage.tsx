@@ -43,6 +43,7 @@ export default function HomePage() {
   const [review, setReview] = useState<DailyReview | null>(null)
   const [overview, setOverview] = useState<OverviewData | null>(null)
   const [models, setModels] = useState<ModelConfigItem[] | null>(null)
+  const [modelLoadFailed, setModelLoadFailed] = useState(false)
   const [welcomeOpen, setWelcomeOpen] = useState(false)
   // V0.0.5 仪表盘补三块"有意义"的卡:
   // - AI 眼中的你(洞察,记忆层面)
@@ -85,8 +86,17 @@ export default function HomePage() {
       }
       modelApi
         .list()
-        .then(({ data }) => setModels(data))
-        .catch(() => setModels([]))
+        .then(({ data }) => {
+          if (cancelled) return
+          setModels(data)
+          setModelLoadFailed(false)
+        })
+        .catch(() => {
+          if (cancelled) return
+          // 读取失败不等于用户没有配置模型,因此不要误导性地弹出首次使用引导。
+          setModels([])
+          setModelLoadFailed(true)
+        })
       fetchReview()
       // 洞察 / 最近研究 —— 失败一律降级为空,不影响其他渲染
       memoryApi
@@ -129,31 +139,31 @@ export default function HomePage() {
       done: hasChat,
       title: '配置对话模型(必做)',
       icon: <SettingOutlined />,
-      desc: '先去「模型配置」加一个对话大模型。推荐智谱 GLM / DeepSeek(注册即送免费额度)。',
+      desc: '先去「模型配置」添加一个对话大模型,让 Meme 能理解问题并执行 Agent 流程。',
       action: () => navigate('/settings/models'),
       btn: hasChat ? '已配置' : '去配置',
     },
     {
       done: hasEmbedding,
-      title: '配置向量模型',
+      title: '配置向量模型(必做)',
       icon: <SettingOutlined />,
-      desc: '加一个 embedding 模型,知识库和记忆的语义检索靠它。',
+      desc: '添加 embedding 模型,知识库和长期记忆的语义检索都依赖它。',
       action: () => navigate('/settings/models'),
       btn: hasEmbedding ? '已配置' : '去配置',
     },
     {
       done: hasDocs,
-      title: '建立你的知识库(可选)',
+      title: '建立知识库(推荐)',
       icon: <BookOutlined />,
-      desc: '上传文档或导入网页,系统自动分块、向量化,之后 AI 回答会引用你的资料。',
+      desc: '上传一份资料,验证解析、检索和回答引用,这是最直观的 RAG 演示。',
       action: () => navigate('/knowledge'),
       btn: hasDocs ? '去管理' : '去上传',
     },
     {
       done: hasChatted,
-      title: '开始智能对话',
+      title: '完成一次智能对话',
       icon: <CommentOutlined />,
-      desc: '配好对话模型就能直接聊。AI 会自动调用知识库、记忆、联网工具回答。',
+      desc: '完成一次真实对话后,再到记忆和执行轨迹查看 Meme 如何工作。',
       action: () => navigate('/chat'),
       btn: hasChatted ? '继续对话' : '去对话',
     },
@@ -171,9 +181,12 @@ export default function HomePage() {
 
   const allReady = hasChat && hasEmbedding
   const finishedSteps = quickSteps.filter((s) => s.done).length
+  const currentStepIndex = quickSteps.findIndex((s) => !s.done)
+  const currentStep = currentStepIndex >= 0 ? quickSteps[currentStepIndex] : null
   // 基础没配好(缺对话或向量模型)= 新用户态:首屏聚焦引导
   // models 未加载完(null)时不判定,避免闪现
-  const needsSetup = models !== null && !allReady
+  // 模型读取失败时保留普通首页,避免把网络错误误判成新用户。
+  const needsSetup = models !== null && !allReady && !modelLoadFailed
 
   // 欢迎引导:仅对「还没配好基础」的新用户首次弹一次,老用户不打扰
   useEffect(() => {
@@ -216,10 +229,13 @@ export default function HomePage() {
             marginBottom: 18,
           }}
         >
-          <b>开始前只需一步:</b>配置一个大模型 API。
+          <b>开始前先完成两项基础配置:</b>
           <br />
-          推荐 <b>智谱 GLM</b> 或 <b>DeepSeek</b>(注册即送免费额度),
-          在「模型配置」页填入 API Key 即可。
+          1. 配置对话模型,让 Meme 能理解和回答问题。
+          <br />
+          2. 配置向量模型,让知识库和长期记忆可以进行语义检索。
+          <br />
+          在「模型配置」页填入 API Key 并测试连接即可。
         </div>
         <div style={{ display: 'flex', gap: 10, justifyContent: 'center' }}>
           <Button
@@ -257,37 +273,45 @@ export default function HomePage() {
           <Tag color="success" icon={<CheckCircleFilled />}>
             基础配置已就绪
           </Tag>
+        ) : modelLoadFailed ? (
+          <Tag color="error">模型状态读取失败</Tag>
         ) : (
-          <Tag color="warning">第一步:先配置对话模型</Tag>
+          <Tag color="warning">
+            当前: {currentStep?.title ?? '继续完成配置'}
+          </Tag>
         )
       }
     >
       {needsSetup && (
         <p style={{ margin: '0 0 16px', color: '#475467', lineHeight: 1.8 }}>
-          完成下面几步,就能开始和你的 AI 助手对话啦 👇 其中{' '}
-          <b style={{ color: '#155EEF' }}>配置对话模型是必做项</b>,没配好其他功能都用不了。
+          按照面试演示主线完成下面几步:先配置基础模型,再用一份资料和一次对话验证{' '}
+          <b style={{ color: '#155EEF' }}>RAG、Memory 与 Trace</b>。
+        </p>
+      )}
+      {modelLoadFailed && (
+        <p style={{ margin: '0 0 16px', color: '#B42318', lineHeight: 1.8 }}>
+          暂时无法读取模型配置,这不代表模型没有配置。你可以先继续浏览 Meme,稍后重试模型配置页。
+        </p>
+      )}
+      {!needsSetup && !modelLoadFailed && allReady && finishedSteps < quickSteps.length && (
+        <p style={{ margin: '0 0 16px', color: '#475467', lineHeight: 1.8 }}>
+          基础模型已就绪。继续完成知识库和一次对话,就能在记忆图谱与执行轨迹中看到完整链路。
         </p>
       )}
       <Row gutter={[14, 14]}>
         {quickSteps.map((step, i) => {
-          const firstTodo = quickSteps.findIndex((s) => !s.done)
-          const isCurrent = !step.done && i === firstTodo
+          const state = step.done ? 'done' : i === currentStepIndex ? 'current' : 'pending'
+          const stateLabel = state === 'done' ? '已完成' : state === 'current' ? '当前步骤' : '待完成'
           return (
             <Col xs={24} sm={12} lg={6} key={step.title}>
-              <div
-                className={`qs-step${step.done ? ' qs-step--done' : ''}`}
-                style={
-                  isCurrent
-                    ? { borderColor: '#155EEF', boxShadow: '0 0 0 2px rgba(21,94,239,0.12)' }
-                    : undefined
-                }
-              >
+              <div className={`qs-step qs-step--${state}`}>
                 <div className="qs-step__num">
                   {step.done ? <CheckCircleFilled /> : i + 1}
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column' }}>
                   <div className="qs-step__title">
-                    {step.icon} {step.title}
+                    <span>{step.icon} {step.title}</span>
+                    <span className={`qs-step__state qs-step__state--${state}`}>{stateLabel}</span>
                   </div>
                   <div className="qs-step__desc">{step.desc}</div>
                   <Button
