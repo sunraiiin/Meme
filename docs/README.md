@@ -10,6 +10,7 @@
 - [ADR-0001：项目功能范围决策](decisions/0001-product-scope.md)
 - [项目路线图](ROADMAP.md)
 - [核心演示流程回归清单](testing/CORE-DEMO-FLOW.md)
+- [核心演示流程回归结果（2026-08-25）](testing/CORE-DEMO-FLOW-RESULT-2026-08-25.md)
 - [代码来源说明](SOURCE-NOTICE.md)
 
 ## 决策状态
