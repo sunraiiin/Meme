@@ -472,6 +472,10 @@ class ChatService:
             data = evt.get("data") or {}
             if ev == "_ping":
                 yield ": ping\n\n"
+            elif ev in {"trace", "resume"}:
+                # trace 用于首屏显示“执行轨迹”入口，resume 用于断线重连时
+                # 恢复已生成内容和 trace_id；两者都必须原样转给前端。
+                yield _sse(ev, data)
             elif ev == "token":
                 if int(data.get("i", 0)) < skip_token_before:
                     continue

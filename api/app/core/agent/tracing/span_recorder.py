@@ -17,7 +17,8 @@ from collections import deque
 from dataclasses import dataclass
 from typing import Literal
 
-from sqlalchemy import update
+from sqlalchemy import select, update
+from sqlalchemy.exc import IntegrityError
 
 from app.config import settings
 from app.core.agent.tracing.models import SpanRecord, TraceRecord
@@ -40,7 +41,8 @@ class SpanRecorder:
 
     生命周期:
     - 应用启动调 `start()` 起后台 task
-    - 业务通过 `push_span(record)` / `push_trace_create(record)` / `push_trace_update(record)` 入队
+    - trace 主记录通过 `ensure_trace_persisted(record)` 先可靠落库
+    - 业务通过 `push_span(record)` / `push_trace_update(record)` 入队
     - 应用关闭调 `stop()` 排空并退出
     """
 
@@ -86,7 +88,33 @@ class SpanRecorder:
             self._task = None
         logger.info("SpanRecorder 已停止")
 
-    # ── 公共 push API(被 tracer.py 调用,非阻塞)──
+    # ── 公共记录 API(被 tracer.py 调用)──
+
+    async def ensure_trace_persisted(self, trace: TraceRecord) -> None:
+        """在向业务侧暴露 trace_id 前确保 trace 主记录已存在。
+
+        trace 主记录是执行轨迹详情页的入口。它不能和 span 一样只依赖后台
+        批处理，否则聊天消息可能已经保存了 trace_id，但对应的记录仍未落库。
+        该操作按 trace_id 幂等；若后台队列已经抢先写入，唯一键冲突可安全忽略。
+        """
+        async for session in get_session():
+            try:
+                session.add(_trace_to_orm(trace))
+                await session.commit()
+            except IntegrityError:
+                await session.rollback()
+                existing_id = await session.scalar(
+                    select(AgentTrace.trace_id).where(
+                        AgentTrace.trace_id == trace.trace_id
+                    )
+                )
+                if existing_id != trace.trace_id:
+                    raise
+                logger.debug("trace 已存在，跳过重复创建: %s", trace.trace_id)
+            except Exception:
+                await session.rollback()
+                raise
+            break
 
     def push_trace_create(self, trace: TraceRecord) -> None:
         self._enqueue(_SpanEvent(kind="trace_create", trace=trace))
