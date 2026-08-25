@@ -516,6 +516,156 @@ RETURN r.id AS id, a.id AS source_id, b.id AS target_id,
 ORDER BY r.id
 """
 
+# ── canonical self 身份迁移（显式目标、单事务、逻辑失活）──
+
+# 只有服务层完成快照校验后才会调用；此查询仍会检查所有目标仍为 active。
+IDENTITY_MIGRATION_MARK_KEEPER = """
+MATCH (keeper:Entity {user_id: $user_id, id: $canonical_entity_id})
+WHERE coalesce(keeper.is_active, true) = true
+  AND coalesce(keeper.is_invalidated, false) = false
+OPTIONAL MATCH (dup:Entity {user_id: $user_id})
+WHERE dup.id IN $alias_entity_ids
+  AND dup.id <> keeper.id
+  AND coalesce(dup.is_active, true) = true
+  AND coalesce(dup.is_invalidated, false) = false
+WITH keeper, collect(dup) AS duplicates
+WHERE size(duplicates) = size($alias_entity_ids)
+SET keeper.name = $display_name,
+    keeper.type = '生命体',
+    keeper.identity_key = $identity_key,
+    keeper.is_self = true,
+    keeper.is_active = true,
+    keeper.is_invalidated = false,
+    keeper.merged_into = NULL,
+    keeper.aliases = $aliases,
+    keeper.human_verified = true,
+    keeper.human_verified_at = datetime(),
+    keeper.confidence = 1.0,
+    keeper.memory_layer = 'long_term'
+RETURN keeper.id AS keeper_id, [dup IN duplicates | dup.id] AS alias_ids
+"""
+
+IDENTITY_MIGRATION_REDIRECT_MENTIONS = """
+MATCH (s:Statement {user_id: $user_id})-[r:MENTIONS]->(dup:Entity {user_id: $user_id})
+WHERE dup.id IN $alias_entity_ids
+MATCH (keeper:Entity {user_id: $user_id, id: $canonical_entity_id})
+MERGE (s)-[nr:MENTIONS]->(keeper)
+ON CREATE SET nr.user_id = coalesce(r.user_id, $user_id),
+              nr.connect_strength = r.connect_strength,
+              nr.created_at = r.created_at
+SET nr.user_id = coalesce(nr.user_id, r.user_id, $user_id),
+    nr.connect_strength = CASE
+        WHEN nr.connect_strength IS NULL THEN r.connect_strength
+        ELSE nr.connect_strength END,
+    nr.created_at = coalesce(nr.created_at, r.created_at)
+DELETE r
+RETURN count(*) AS redirected
+"""
+
+IDENTITY_MIGRATION_REDIRECT_INVOLVES = """
+MATCH (ev:Event {user_id: $user_id})-[r:INVOLVES]->(dup:Entity {user_id: $user_id})
+WHERE dup.id IN $alias_entity_ids
+MATCH (keeper:Entity {user_id: $user_id, id: $canonical_entity_id})
+MERGE (ev)-[nr:INVOLVES]->(keeper)
+ON CREATE SET nr.user_id = coalesce(r.user_id, $user_id),
+              nr.role = r.role,
+              nr.created_at = r.created_at
+SET nr.user_id = coalesce(nr.user_id, r.user_id, $user_id),
+    nr.role = coalesce(nr.role, r.role),
+    nr.created_at = coalesce(nr.created_at, r.created_at)
+DELETE r
+RETURN count(*) AS redirected
+"""
+
+IDENTITY_MIGRATION_REDIRECT_RELATION_OUT = """
+MATCH (dup:Entity {user_id: $user_id})-[r:RELATION]->(other:Entity {user_id: $user_id})
+WHERE dup.id IN $alias_entity_ids
+  AND other.id <> $canonical_entity_id
+  AND NOT other.id IN $alias_entity_ids
+MATCH (keeper:Entity {user_id: $user_id, id: $canonical_entity_id})
+MERGE (keeper)-[nr:RELATION {predicate: r.predicate, target_id: other.id}]->(other)
+ON CREATE SET nr.id = r.id,
+              nr.user_id = coalesce(r.user_id, $user_id),
+              nr.predicate_surface = r.predicate_surface,
+              nr.source_text = r.source_text,
+              nr.statement_id = r.statement_id,
+              nr.value = r.value,
+              nr.valid_at = r.valid_at,
+              nr.invalid_at = r.invalid_at,
+              nr.importance = r.importance,
+              nr.confidence = r.confidence,
+              nr.access_count = r.access_count,
+              nr.created_at = r.created_at
+SET nr.user_id = coalesce(nr.user_id, r.user_id, $user_id),
+    nr.source_text = CASE WHEN coalesce(nr.source_text, '') = ''
+                          THEN coalesce(r.source_text, '') ELSE nr.source_text END,
+    nr.statement_id = coalesce(nr.statement_id, r.statement_id),
+    nr.value = coalesce(nr.value, r.value),
+    nr.predicate_surface = coalesce(nr.predicate_surface, r.predicate_surface),
+    nr.valid_at = coalesce(nr.valid_at, r.valid_at),
+    nr.invalid_at = coalesce(nr.invalid_at, r.invalid_at),
+    nr.importance = coalesce(nr.importance, r.importance),
+    nr.confidence = coalesce(nr.confidence, r.confidence),
+    nr.access_count = coalesce(nr.access_count, r.access_count),
+    nr.created_at = coalesce(nr.created_at, r.created_at)
+DELETE r
+RETURN count(*) AS redirected
+"""
+
+IDENTITY_MIGRATION_REDIRECT_RELATION_IN = """
+MATCH (other:Entity {user_id: $user_id})-[r:RELATION]->(dup:Entity {user_id: $user_id})
+WHERE dup.id IN $alias_entity_ids
+  AND other.id <> $canonical_entity_id
+  AND NOT other.id IN $alias_entity_ids
+MATCH (keeper:Entity {user_id: $user_id, id: $canonical_entity_id})
+MERGE (other)-[nr:RELATION {predicate: r.predicate, target_id: $canonical_entity_id}]->(keeper)
+ON CREATE SET nr.id = r.id,
+              nr.user_id = coalesce(r.user_id, $user_id),
+              nr.predicate_surface = r.predicate_surface,
+              nr.source_text = r.source_text,
+              nr.statement_id = r.statement_id,
+              nr.value = r.value,
+              nr.valid_at = r.valid_at,
+              nr.invalid_at = r.invalid_at,
+              nr.importance = r.importance,
+              nr.confidence = r.confidence,
+              nr.access_count = r.access_count,
+              nr.created_at = r.created_at
+SET nr.user_id = coalesce(nr.user_id, r.user_id, $user_id),
+    nr.source_text = CASE WHEN coalesce(nr.source_text, '') = ''
+                          THEN coalesce(r.source_text, '') ELSE nr.source_text END,
+    nr.statement_id = coalesce(nr.statement_id, r.statement_id),
+    nr.value = coalesce(nr.value, r.value),
+    nr.predicate_surface = coalesce(nr.predicate_surface, r.predicate_surface),
+    nr.valid_at = coalesce(nr.valid_at, r.valid_at),
+    nr.invalid_at = coalesce(nr.invalid_at, r.invalid_at),
+    nr.importance = coalesce(nr.importance, r.importance),
+    nr.confidence = coalesce(nr.confidence, r.confidence),
+    nr.access_count = coalesce(nr.access_count, r.access_count),
+    nr.created_at = coalesce(nr.created_at, r.created_at)
+DELETE r
+RETURN count(*) AS redirected
+"""
+
+# 别名之间或别名与 canonical self 之间的关系不保留为无意义的 self-loop。
+IDENTITY_MIGRATION_DROP_ALIAS_INTERNAL_RELATIONS = """
+MATCH (a:Entity {user_id: $user_id})-[r:RELATION]->(b:Entity {user_id: $user_id})
+WHERE a.id IN $alias_entity_ids
+  AND (b.id IN $alias_entity_ids OR b.id = $canonical_entity_id)
+DELETE r
+RETURN count(*) AS dropped
+"""
+
+IDENTITY_MIGRATION_MARK_ALIASES = """
+MATCH (dup:Entity {user_id: $user_id})
+WHERE dup.id IN $alias_entity_ids
+SET dup.is_active = false,
+    dup.is_invalidated = false,
+    dup.is_self = false,
+    dup.merged_into = $canonical_entity_id
+RETURN count(dup) AS marked
+"""
+
 # upsert 社区节点
 COMMUNITY_UPSERT = """
 MERGE (c:Community {id: $community_id, user_id: $user_id})

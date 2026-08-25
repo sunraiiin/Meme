@@ -294,6 +294,63 @@ class MemoryGraphRepository:
             result = await session.run(cq.VALIDATOR_RELATIONS, user_id=user_id)
             return [dict(record) async for record in result]
 
+    async def migrate_canonical_self(
+        self,
+        *,
+        user_id: str,
+        canonical_entity_id: str,
+        alias_entity_ids: list[str],
+        identity_key: str,
+        display_name: str,
+        aliases: list[str],
+    ) -> dict[str, Any] | None:
+        """在一个 Neo4j 写事务内完成已确认的 canonical self 迁移。
+
+        目标实体由调用方显式提供；这里不做名称猜测。旧实体只逻辑失活，
+        关系/提及/事件边会尽量保留属性并重定向到 canonical self。
+        """
+
+        params = {
+            "user_id": user_id,
+            "canonical_entity_id": canonical_entity_id,
+            "alias_entity_ids": alias_entity_ids,
+            "identity_key": identity_key,
+            "display_name": display_name,
+            "aliases": aliases,
+        }
+
+        async def _txn(tx):
+            result = await tx.run(cq.IDENTITY_MIGRATION_MARK_KEEPER, **params)
+            keeper = await result.single()
+            if keeper is None:
+                return None
+
+            counts: dict[str, int] = {}
+            for key, query, field in (
+                ("mentions_redirected", cq.IDENTITY_MIGRATION_REDIRECT_MENTIONS, "redirected"),
+                ("involves_redirected", cq.IDENTITY_MIGRATION_REDIRECT_INVOLVES, "redirected"),
+                ("relations_out_redirected", cq.IDENTITY_MIGRATION_REDIRECT_RELATION_OUT, "redirected"),
+                ("relations_in_redirected", cq.IDENTITY_MIGRATION_REDIRECT_RELATION_IN, "redirected"),
+                (
+                    "internal_relations_dropped",
+                    cq.IDENTITY_MIGRATION_DROP_ALIAS_INTERNAL_RELATIONS,
+                    "dropped",
+                ),
+                ("aliases_marked", cq.IDENTITY_MIGRATION_MARK_ALIASES, "marked"),
+            ):
+                result = await tx.run(query, **params)
+                record = await result.single()
+                counts[key] = int(record.get(field, 0) or 0) if record else 0
+
+            return {
+                "canonical_entity_id": keeper["keeper_id"],
+                "alias_entity_ids": list(keeper["alias_ids"] or []),
+                **counts,
+            }
+
+        async with self._driver.session() as session:
+            return await session.execute_write(_txn)
+
     async def bump_entity_access(self, user_id: str, entity_ids: list[str]) -> None:
         """检索命中回写：实体 access_count +1、更新 last_access_at。失败不影响检索。"""
         if not entity_ids:
