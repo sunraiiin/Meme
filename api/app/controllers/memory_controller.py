@@ -19,6 +19,7 @@ from app.schemas.memory_schema import (
 )
 from app.services.memory_curation_service import MemoryCurationService
 from app.services.memory_graph_validation_service import MemoryGraphValidationService
+from app.services.memory_identity_migration_service import MemoryIdentityMigrationService
 from app.services.memory_service import MemoryService
 
 router = APIRouter(prefix="/memories", tags=["memory"])
@@ -283,6 +284,15 @@ async def validate_memory_graph(
     """只读扫描当前用户图谱，返回迁移前质量报告。"""
     report = await MemoryGraphValidationService().validate(user.id)
     return success(report)
+
+
+@router.get("/graph/identity-migration-preview")
+async def preview_memory_identity_migration(
+    user: User = Depends(get_current_user),
+):
+    """只读列出 canonical self 身份迁移候选，不自动选择或写入。"""
+    preview = await MemoryIdentityMigrationService().preview(user.id)
+    return success(preview)
 
 
 @router.get("/graph/entity/{entity_id}")
