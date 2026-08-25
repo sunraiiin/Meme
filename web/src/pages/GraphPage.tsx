@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Button, Card, Empty, Input, Space, Spin, Tag, Typography, message } from 'antd'
 import {
   AimOutlined,
+  FullscreenOutlined,
   MergeCellsOutlined,
   ReloadOutlined,
 } from '@ant-design/icons'
@@ -52,6 +53,19 @@ function kindOf(n: GraphNode): Kind {
   return n.kind && KIND_META[n.kind] ? (n.kind as Kind) : 'Entity'
 }
 
+function nodeText(n: GraphNode): string {
+  return n.full_name || n.name
+}
+
+function compactLabel(n: GraphNode): string {
+  const text = nodeText(n)
+  if (text.length <= 12 || kindOf(n) === 'Entity' || kindOf(n) === 'Event') {
+    return text.length > 12 ? `${text.slice(0, 12)}…` : text
+  }
+  // 溯源层节点经常有相同开头，保留尾部帮助区分内容。
+  return `${text.slice(0, 6)}…${text.slice(-6)}`
+}
+
 function useIsMobile() {
   const [m, setM] = useState(
     () => typeof window !== 'undefined' && window.matchMedia('(max-width: 768px)').matches,
@@ -73,6 +87,7 @@ export default function GraphPage() {
   const [merging, setMerging] = useState(false)
   const [search, setSearch] = useState('')
   const [visibleKinds, setVisibleKinds] = useState<Set<string>>(() => new Set(DEFAULT_KINDS))
+  const [viewMode, setViewMode] = useState<'focus' | 'overview'>('focus')
 
   // 当前“已展开”的节点集合（探索式：从焦点出发，点哪展开哪），用 id 集合驱动
   const [shownIds, setShownIds] = useState<Set<string>>(() => new Set())
@@ -143,10 +158,15 @@ export default function GraphPage() {
       setShownIds(new Set())
       return
     }
+    if (viewMode === 'overview') {
+      setShownIds(new Set(data.nodes.map((n) => n.id)))
+      setTimeout(() => fgRef.current?.zoomToFit(500, 60), 400)
+      return
+    }
     const entities = data.nodes.filter((n) => kindOf(n) === 'Entity')
     const pool = entities.length ? entities : data.nodes
     const seed =
-      pool.find((n) => /用户|^我$|本人|自己/.test(n.name)) ??
+      pool.find((n) => /用户|^我$|本人|自己/.test(nodeText(n))) ??
       pool.reduce((a, b) =>
         (store.degree.get(b.id) ?? 0) > (store.degree.get(a.id) ?? 0) ? b : a,
       )
@@ -167,7 +187,7 @@ export default function GraphPage() {
     setShownIds(ids)
     // 居中
     setTimeout(() => fgRef.current?.zoomToFit(500, 60), 400)
-  }, [data, store])
+  }, [data, store, viewMode])
 
   const expand = useCallback(
     (id: string) => {
@@ -260,7 +280,7 @@ export default function GraphPage() {
     (node: FGNode) => {
       // 只展开关联 + 出详情，不移动/居中视图（避免每次点击图都跳）
       expand(node.id)
-      if (kindOf(node) === 'Entity') setSelected(node)
+      setSelected(node)
     },
     [expand],
   )
@@ -278,10 +298,10 @@ export default function GraphPage() {
       const hit =
         store.fgNodes.get(kw) ??
         Array.from(store.fgNodes.values()).find((n) =>
-          n.name.toLowerCase().includes(kw.toLowerCase()),
+          nodeText(n).toLowerCase().includes(kw.toLowerCase()),
         )
       if (!hit) {
-        message.info('没找到匹配的实体')
+        message.info('没找到匹配的图谱节点')
         return
       }
       // 把命中点设为新焦点（它+一跳邻居），并居中
@@ -322,7 +342,11 @@ export default function GraphPage() {
     setMerging(true)
     try {
       const { data } = await memoryApi.mergeDuplicates()
-      message.success(`已合并 ${data.removed} 个重复实体`)
+      if (data.removed > 0) {
+        message.success(`已合并 ${data.removed} 个同类重复实体`)
+      } else {
+        message.info('没有发现同名同类型的有效实体；陈述、片段和对话不会被此操作合并')
+      }
       load()
     } catch (e) {
       message.error((e as Error).message)
@@ -333,6 +357,7 @@ export default function GraphPage() {
 
   const resetView = () => {
     // 解除所有 pin，回到焦点视图
+    setViewMode('focus')
     store.fgNodes.forEach((n) => {
       n.fx = undefined
       n.fy = undefined
@@ -364,11 +389,27 @@ export default function GraphPage() {
             </Button>
             <Button
               size="small"
+              icon={<FullscreenOutlined />}
+              type={viewMode === 'overview' ? 'primary' : 'default'}
+              onClick={() => {
+                if (viewMode === 'overview') {
+                  setViewMode('focus')
+                } else {
+                  // 全景视图应一次展示所有层级；筛选仍可在底部手动收窄。
+                  setVisibleKinds(new Set((data?.nodes ?? []).map(kindOf)))
+                  setViewMode('overview')
+                }
+              }}
+            >
+              {isMobile ? '' : viewMode === 'overview' ? '聚焦视图' : '全景视图'}
+            </Button>
+            <Button
+              size="small"
               icon={<MergeCellsOutlined />}
               loading={merging}
               onClick={onMergeDuplicates}
             >
-              {isMobile ? '' : '合并重复'}
+              {isMobile ? '' : '合并同类实体'}
             </Button>
             <Button
               size="small"
@@ -446,7 +487,7 @@ export default function GraphPage() {
                   }
                   // 标签：缩得太小不画，避免糊成一团
                   if (globalScale > 0.7 || r > 9) {
-                    const label = n.name.length > 10 ? n.name.slice(0, 10) + '…' : n.name
+                    const label = compactLabel(n)
                     const fs = Math.max(3, 11 / globalScale)
                     ctx.font = `${fs}px -apple-system, "PingFang SC", sans-serif`
                     ctx.textAlign = 'center'
@@ -507,20 +548,34 @@ export default function GraphPage() {
                     {selected.name}
                   </Text>
                   <div style={{ margin: '8px 0', display: 'flex', flexWrap: 'wrap', gap: 4 }}>
-                    <Tag color="blue">{selected.type}</Tag>
-                    {selected.memory_layer === 'long_term' ? (
+                    <Tag color="blue">{KIND_META[kindOf(selected)].label}</Tag>
+                    {selected.type && <Tag>{selected.type}</Tag>}
+                    {selected.memory_layer && selected.memory_layer === 'long_term' ? (
                       <Tag color="gold">长期记忆</Tag>
-                    ) : (
+                    ) : selected.memory_layer ? (
                       <Tag>短期记忆</Tag>
-                    )}
+                    ) : null}
                     {typeof selected.importance === 'number' && (
                       <Tag color="green">重要度 {Math.round(selected.importance * 100)}</Tag>
                     )}
                   </div>
+                  {selected.full_name && selected.full_name !== selected.name && (
+                    <Paragraph style={{ fontSize: 13, marginBottom: 8, whiteSpace: 'pre-wrap' }}>
+                      {selected.full_name}
+                    </Paragraph>
+                  )}
                   {selected.description && (
                     <Paragraph type="secondary" style={{ fontSize: 13, marginBottom: 8 }}>
                       {selected.description}
                     </Paragraph>
+                  )}
+                  {(selected.source || selected.speaker || selected.dialog_at || selected.created_at) && (
+                    <div style={{ fontSize: 12, color: '#667085', lineHeight: 1.7, marginBottom: 8 }}>
+                      {selected.source && <div>来源：{selected.source === 'auto' ? '对话自动萃取' : '主动记住'}</div>}
+                      {selected.speaker && <div>说话人：{selected.speaker}</div>}
+                      {selected.dialog_at && <div>发生时间：{selected.dialog_at}</div>}
+                      {selected.created_at && <div>写入时间：{selected.created_at}</div>}
+                    </div>
                   )}
                   {selected.traits && selected.traits.length > 0 && (
                     <div style={{ marginBottom: 8 }}>
@@ -559,8 +614,8 @@ export default function GraphPage() {
                 {graphData.nodes.length} 个
                 <br />
                 {isMobile
-                  ? '点节点展开关联 · 双指缩放 · 拖动整理 · 下方筛类型'
-                  : '点节点展开它的关联 · 拖动可固定 · 滚轮缩放 · 搜索定位 · 下方圆点筛类型'}
+                  ? `${viewMode === 'overview' ? '全景视图' : '聚焦视图'} · 点节点展开关联 · 双指缩放 · 下方筛类型`
+                  : `${viewMode === 'overview' ? '全景视图' : '聚焦视图'} · 点节点展开关联 · 拖动可固定 · 滚轮缩放 · 搜索定位 · 下方圆点筛类型`}
               </div>
             </>
           )}
