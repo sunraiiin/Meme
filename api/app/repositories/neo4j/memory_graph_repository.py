@@ -282,6 +282,18 @@ class MemoryGraphRepository:
             )
             return [dict(record) async for record in result]
 
+    async def validator_entities(self, user_id: str) -> list[dict[str, Any]]:
+        """只读返回图谱校验所需的实体元数据。"""
+        async with self._driver.session() as session:
+            result = await session.run(cq.VALIDATOR_ENTITIES, user_id=user_id)
+            return [dict(record) async for record in result]
+
+    async def validator_relations(self, user_id: str) -> list[dict[str, Any]]:
+        """只读返回关系及其 Statement 证据状态。"""
+        async with self._driver.session() as session:
+            result = await session.run(cq.VALIDATOR_RELATIONS, user_id=user_id)
+            return [dict(record) async for record in result]
+
     async def bump_entity_access(self, user_id: str, entity_ids: list[str]) -> None:
         """检索命中回写：实体 access_count +1、更新 last_access_at。失败不影响检索。"""
         if not entity_ids:

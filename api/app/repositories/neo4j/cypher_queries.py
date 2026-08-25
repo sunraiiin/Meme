@@ -496,6 +496,26 @@ RETURN e.id AS entity_id, nb.id AS id,
        nb.community_id AS community_id, nb.name_embedding AS name_embedding
 """
 
+# 图谱质量校验：只读，严格按 user_id 隔离。
+VALIDATOR_ENTITIES = """
+MATCH (e:Entity {user_id: $user_id})
+RETURN e.id AS id, e.name AS name, e.type AS type,
+       e.identity_key AS identity_key, coalesce(e.is_self, false) AS is_self,
+       coalesce(e.is_active, true) AS is_active,
+       coalesce(e.is_invalidated, false) AS is_invalidated,
+       e.merged_into AS merged_into, e.aliases AS aliases
+ORDER BY e.id
+"""
+
+VALIDATOR_RELATIONS = """
+MATCH (a:Entity {user_id: $user_id})-[r:RELATION]->(b:Entity {user_id: $user_id})
+OPTIONAL MATCH (s:Statement {user_id: $user_id, id: r.statement_id})
+RETURN r.id AS id, a.id AS source_id, b.id AS target_id,
+       r.predicate AS predicate, r.source_text AS source_text,
+       r.statement_id AS statement_id, s.id IS NOT NULL AS statement_exists
+ORDER BY r.id
+"""
+
 # upsert 社区节点
 COMMUNITY_UPSERT = """
 MERGE (c:Community {id: $community_id, user_id: $user_id})

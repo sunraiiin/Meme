@@ -18,6 +18,7 @@ from app.schemas.memory_schema import (
     RememberRequest,
 )
 from app.services.memory_curation_service import MemoryCurationService
+from app.services.memory_graph_validation_service import MemoryGraphValidationService
 from app.services.memory_service import MemoryService
 
 router = APIRouter(prefix="/memories", tags=["memory"])
@@ -273,6 +274,15 @@ async def get_graph(
 ):
     """知识图谱全量数据：实体节点 + 关系边 + 社区。"""
     return success(await MemoryService(session).get_graph(user.id))
+
+
+@router.get("/graph/validate")
+async def validate_memory_graph(
+    user: User = Depends(get_current_user),
+):
+    """只读扫描当前用户图谱，返回迁移前质量报告。"""
+    report = await MemoryGraphValidationService().validate(user.id)
+    return success(report)
 
 
 @router.get("/graph/entity/{entity_id}")
