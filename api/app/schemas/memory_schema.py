@@ -13,3 +13,9 @@ class MemorySearchRequest(BaseModel):
 
     query: str = Field(..., min_length=1, description="检索关键词")
     top_k: int = Field(default=10, ge=1, le=50)
+
+
+class MemoryCurationPlanRequest(BaseModel):
+    """自然语言记忆整理预览请求。"""
+
+    request: str = Field(..., min_length=1, max_length=2000, description="记忆整理请求")
