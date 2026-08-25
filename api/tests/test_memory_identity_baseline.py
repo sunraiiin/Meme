@@ -45,6 +45,11 @@ class MemoryIdentityBaselineTests(unittest.IsolatedAsyncioTestCase):
         self.assertIn("startNode(r)", cq.ENTITY_NEIGHBORS)
         self.assertIn("st:Statement", cq.ENTITY_NEIGHBORS)
 
+    def test_curator_merge_is_logical_and_retrieval_hides_inactive_nodes(self):
+        self.assertIn("dup.is_active = false", cq.MERGE_ENTITY_MARK)
+        self.assertNotIn("DETACH DELETE", cq.MERGE_ENTITY_MARK)
+        self.assertIn("coalesce(node.is_active, true) = true", cq.ENTITY_FULLTEXT_SEARCH)
+
     def test_identity_fixture_covers_required_ambiguity_classes(self):
         rows = json.loads(_IDENTITY_FIXTURE.read_text(encoding="utf-8"))
         scenarios = {row["scenario"] for row in rows}

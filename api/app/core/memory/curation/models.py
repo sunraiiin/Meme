@@ -1,6 +1,7 @@
 """Memory Curator Agent 的稳定操作契约。"""
 from __future__ import annotations
 
+from datetime import datetime
 from typing import Any, Literal
 from uuid import uuid4
 
@@ -54,6 +55,8 @@ class CurationPlan(BaseModel):
     executable: bool = True
     blocking_reasons: list[str] = Field(default_factory=list)
     side_effects: Literal["none"] = "none"
+    expires_at: datetime | None = None
+    confirmation_token: str | None = None
 
 
 __all__ = ["CurationOperation", "CurationPlan", "OperationKind", "RiskLevel"]

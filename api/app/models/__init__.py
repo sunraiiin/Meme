@@ -20,6 +20,7 @@ from app.models.loop_model import LoopIteration, LoopRun
 from app.models.mcp_server_model import MCPServer
 from app.models.memory_model import Memory
 from app.models.memory_correction_model import MemoryCorrection
+from app.models.memory_curation_model import MemoryCurationOperation
 from app.models.message_feedback_model import MessageFeedback
 from app.models.model_config_model import ModelConfig
 from app.models.persona_group_model import PersonaGroup
@@ -54,6 +55,7 @@ __all__ = [
     "MCPServer",
     "Memory",
     "MemoryCorrection",
+    "MemoryCurationOperation",
     "MessageFeedback",
     "ModelConfig",
     "PersonaGroup",
