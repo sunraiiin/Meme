@@ -45,6 +45,16 @@ same change. Do not silently leave conflicting sources of truth.
 - Use separate Issues and PRs for independent feature removals or migrations.
 - Prefer Squash and merge so each completed Issue becomes one clear commit on `main`.
 
+### GitHub Issue/PR body invariant
+
+- Never pass a multiline Issue or PR body as an inline shell argument.
+- Write the body as a real Markdown file and use
+  `scripts/github/create-issue.ps1` or `scripts/github/create-pr.ps1`.
+- These helpers reject literal `\\n`, `` `n``, and `\\r` escape sequences before calling GitHub.
+- After creating or editing an Issue/PR, read its body back with `gh issue view` or
+  `gh pr view` and verify headings and lists render as Markdown. Fix malformed content
+  immediately; do not leave escaped newlines in repository history.
+
 ## Product and implementation guardrails
 
 - Follow `docs/decisions/0001-product-scope.md`; do not duplicate its feature list here.
