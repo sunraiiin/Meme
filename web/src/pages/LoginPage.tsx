@@ -11,7 +11,8 @@ interface FormValues {
   password: string
 }
 
-const LS_REMEMBER = 'comet_remember'
+const LS_REMEMBER = 'meme_remember'
+const LEGACY_LS_REMEMBER = 'comet_remember'
 
 export default function LoginPage() {
   const navigate = useNavigate()
@@ -26,8 +27,9 @@ export default function LoginPage() {
 
   useEffect(() => {
     try {
-      const raw = localStorage.getItem(LS_REMEMBER)
+      const raw = localStorage.getItem(LS_REMEMBER) ?? localStorage.getItem(LEGACY_LS_REMEMBER)
       if (!raw) return
+      if (!localStorage.getItem(LS_REMEMBER)) localStorage.setItem(LS_REMEMBER, raw)
       const saved = JSON.parse(raw) as { email?: string; password?: string }
       if (saved.email) {
         loginForm.setFieldsValue({ email: saved.email, password: saved.password ?? '' })
@@ -54,6 +56,7 @@ export default function LoginPage() {
         )
       } else {
         localStorage.removeItem(LS_REMEMBER)
+        localStorage.removeItem(LEGACY_LS_REMEMBER)
       }
       message.success('登录成功')
       const redirect = searchParams.get('redirect')
@@ -176,8 +179,8 @@ export default function LoginPage() {
     <div className="applogin">
       <div className="applogin-bg" />
       <div className="applogin-box">
-        <img src={logo} alt="Comet" className="applogin-logo" />
-        <h1 className="applogin-title">彗记 Comet</h1>
+        <img src={logo} alt="Meme" className="applogin-logo" />
+        <h1 className="applogin-title">Meme</h1>
         <p className="applogin-sub">
           {tab === 'login' ? '登录以继续你的知识之旅' : '创建账号，开启你的 AI 知识库'}
         </p>

@@ -17,17 +17,17 @@ export const productFeatures = {
   search: { lifecycle: 'core', enabled: true, showInNavigation: true },
   traces: { lifecycle: 'core', enabled: true, showInNavigation: true },
   modelConfig: { lifecycle: 'core', enabled: true, showInNavigation: true },
-  agentConfig: { lifecycle: 'core', enabled: true, showInNavigation: true },
+  // AI 助手配置保留能力，但暂不作为默认产品入口。
+  agentConfig: { lifecycle: 'core', enabled: true, showInNavigation: false },
 
   scheduledTasks: { lifecycle: 'advanced', enabled: true, showInNavigation: false },
-  research: { lifecycle: 'advanced', enabled: true, showInNavigation: false },
+  research: { lifecycle: 'advanced', enabled: true, showInNavigation: true },
   verifier: { lifecycle: 'advanced', enabled: true, showInNavigation: false },
   skills: { lifecycle: 'advanced', enabled: true, showInNavigation: false },
-  mcp: { lifecycle: 'advanced', enabled: true, showInNavigation: false },
+  mcp: { lifecycle: 'advanced', enabled: true, showInNavigation: true },
   imageLibrary: { lifecycle: 'advanced', enabled: true, showInNavigation: false },
   complexTags: { lifecycle: 'advanced', enabled: true, showInNavigation: false },
   reportExport: { lifecycle: 'advanced', enabled: true, showInNavigation: false },
-
 } as const satisfies Record<string, FeatureDefinition>
 
 export type FeatureKey = keyof typeof productFeatures
