@@ -67,6 +67,45 @@ class MemoryGraphValidatorTests(unittest.TestCase):
         )
         self.assertIn("INACTIVE_ENTITY_PRESENT", {finding.rule_id for finding in report.findings})
 
+    def test_post_migration_graph_has_one_active_self_and_keeps_inactive_alias_for_audit(self):
+        report = validate_graph(
+            user_id="user-1",
+            entities=[
+                {
+                    "id": "self-1",
+                    "name": "林舟",
+                    "type": "生命体",
+                    "identity_key": "self:user-1",
+                    "is_self": True,
+                    "is_active": True,
+                    "is_invalidated": False,
+                },
+                {
+                    "id": "ordinary-1",
+                    "name": "多多",
+                    "type": "生命体",
+                    "is_active": True,
+                    "is_invalidated": False,
+                },
+                {
+                    "id": "alias-1",
+                    "name": "林舟",
+                    "type": "称呼别名",
+                    "is_active": False,
+                    "is_invalidated": False,
+                    "merged_into": "self-1",
+                },
+            ],
+            relations=[],
+        )
+
+        self.assertEqual(report.error_count, 0)
+        self.assertEqual(report.warning_count, 0)
+        self.assertEqual(
+            {finding.rule_id for finding in report.findings},
+            {"INACTIVE_ENTITY_PRESENT"},
+        )
+
 
 if __name__ == "__main__":
     unittest.main()

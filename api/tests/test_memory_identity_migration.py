@@ -90,6 +90,32 @@ class MemoryIdentityMigrationPreviewTests(unittest.TestCase):
         self.assertEqual(preview.identity_key, "self:user-1")
         self.assertEqual(preview.alias_candidates[0].relation_count, 1)
 
+    def test_inactive_merged_alias_is_excluded_from_new_migration_candidates(self):
+        preview = build_identity_migration_preview(
+            user_id="user-1",
+            entities=[
+                {
+                    "id": "self-1",
+                    "name": "林舟",
+                    "type": "生命体",
+                    "identity_key": "self:user-1",
+                    "is_self": True,
+                    "is_active": True,
+                },
+                {
+                    "id": "alias-1",
+                    "name": "林舟",
+                    "type": "称呼别名",
+                    "is_active": False,
+                    "merged_into": "self-1",
+                },
+            ],
+            relations=[],
+        )
+
+        self.assertEqual([candidate.entity_id for candidate in preview.alias_candidates], [])
+        self.assertEqual([candidate.entity_id for candidate in preview.candidate_self_entities], ["self-1"])
+
 
 class MemoryIdentityMigrationExecutionTests(unittest.IsolatedAsyncioTestCase):
     async def test_execution_requires_explicit_confirmation(self):

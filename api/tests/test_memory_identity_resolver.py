@@ -62,6 +62,30 @@ class MemoryIdentityResolverTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(normalized[0].id, "self-existing")
         self.assertEqual(redirect[entity.id], "self-existing")
 
+    async def test_migrated_self_is_reused_while_ordinary_life_entity_stays_separate(self):
+        existing = {
+            "id": "self-migrated",
+            "name": "林舟",
+            "aliases": ["我", "用户", "本人"],
+            "identity_key": "self:u1",
+            "is_self": True,
+        }
+        self_entity = EntityNode(user_id="u1", name="林舟", type="生命体")
+        ordinary_entity = EntityNode(user_id="u1", name="多多", type="生命体")
+
+        normalized, redirect = await normalize_entity_pool(
+            repo=_Repo(existing),
+            user_id="u1",
+            text="林舟正在开发 Meme，家里的多多很可爱。",
+            entities=[self_entity, ordinary_entity],
+        )
+
+        self.assertEqual([entity.id for entity in normalized], ["self-migrated", ordinary_entity.id])
+        self.assertEqual(redirect, {self_entity.id: "self-migrated"})
+        self.assertEqual(sum(entity.is_self for entity in normalized), 1)
+        self.assertEqual(normalized[1].name, "多多")
+        self.assertFalse(normalized[1].is_self)
+
     async def test_same_name_with_colleague_context_is_not_bound_to_self(self):
         existing = {
             "id": "self-existing",
