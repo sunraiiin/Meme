@@ -1451,6 +1451,14 @@ body {
   background: linear-gradient(180deg, #f1fbf3 0%, #fafffb 100%);
   border-color: #cdeccf;
 }
+.qs-step--current {
+  background: linear-gradient(180deg, #f2f7ff 0%, #fbfdff 100%);
+  border-color: #9bbcff;
+  box-shadow: 0 0 0 2px rgba(21, 94, 239, 0.12);
+}
+.qs-step--pending {
+  background: #fff;
+}
 .qs-step__num {
   flex-shrink: 0;
   width: 30px;
@@ -1467,13 +1475,37 @@ body {
 .qs-step--done .qs-step__num {
   background: linear-gradient(135deg, #4cc36a, #369f21);
 }
+.qs-step--pending .qs-step__num {
+  background: linear-gradient(135deg, #98a2b3, #667085);
+}
 .qs-step__title {
   font-weight: 600;
   font-size: 15px;
   color: #1d2129;
   display: flex;
   align-items: center;
+  justify-content: space-between;
   gap: 6px;
+}
+.qs-step__state {
+  flex-shrink: 0;
+  padding: 2px 6px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 500;
+  line-height: 1.4;
+}
+.qs-step__state--done {
+  color: #237b35;
+  background: #e7f7e9;
+}
+.qs-step__state--current {
+  color: #155eef;
+  background: #e5efff;
+}
+.qs-step__state--pending {
+  color: #667085;
+  background: #f2f4f7;
 }
 .qs-step__desc {
   margin-top: 4px;
