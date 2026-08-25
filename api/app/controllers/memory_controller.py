@@ -12,6 +12,7 @@ from app.core.response import success
 from app.db.postgres import get_session
 from app.models.user_model import User
 from app.schemas.memory_schema import (
+    MemoryCurationExecuteRequest,
     MemoryCurationPlanRequest,
     MemorySearchRequest,
     RememberRequest,
@@ -51,6 +52,40 @@ async def plan_memory_curation(
     """把自然语言整理请求转成只读、可审阅的结构化计划。"""
     plan = await MemoryCurationService().plan(user.id, body.request)
     return success(plan)
+
+
+@router.post("/curation/execute")
+async def execute_memory_curation(
+    body: MemoryCurationExecuteRequest,
+    user: User = Depends(get_current_user),
+    session: AsyncSession = Depends(get_session),
+):
+    """验证短期令牌并执行已确认的白名单整理计划。"""
+    result = await MemoryCurationService(session=session).execute(
+        user.id, body.plan, body.confirmation_token, body.confirmed
+    )
+    return success(result, "记忆整理已执行")
+
+
+@router.post("/curation/undo/{operation_id}")
+async def undo_memory_curation(
+    operation_id: str,
+    user: User = Depends(get_current_user),
+    session: AsyncSession = Depends(get_session),
+):
+    """从执行审计中的原始快照恢复可安全撤销的操作。"""
+    result = await MemoryCurationService(session=session).undo(user.id, operation_id)
+    return success(result, "记忆整理已撤销")
+
+
+@router.get("/curation/audit")
+async def list_memory_curation_audit(
+    limit: int = Query(default=50, ge=1, le=100),
+    user: User = Depends(get_current_user),
+    session: AsyncSession = Depends(get_session),
+):
+    """返回当前用户的记忆整理执行审计。"""
+    return success(await MemoryCurationService(session=session).audit(user.id, limit))
 
 
 @router.get("/profile")

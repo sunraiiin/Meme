@@ -1,7 +1,12 @@
 import unittest
 import uuid
+import copy
+from datetime import datetime, timezone
+from types import SimpleNamespace
+from unittest.mock import patch
 
 from app.core.memory.curation.planner import build_curation_plan
+from app.core.exceptions import BizError
 from app.services.memory_curation_service import MemoryCurationService
 
 
@@ -98,6 +103,109 @@ class MemoryCurationServiceTests(unittest.IsolatedAsyncioTestCase):
 
         self.assertFalse(plan["executable"])
         self.assertTrue(any("不存在" in item for item in plan["blocking_reasons"]))
+
+    async def test_execute_requires_confirmation_and_can_be_undone(self):
+        user_id = uuid.uuid4()
+
+        class _GraphRepo:
+            def __init__(self):
+                self.entity = {
+                    "id": "self-1",
+                    "name": "旧名字",
+                    "type": "生命体",
+                    "description": "当前用户本人",
+                    "aliases": ["用户"],
+                    "identity_key": f"self:{user_id}",
+                    "is_self": True,
+                    "is_active": True,
+                    "is_invalidated": False,
+                }
+
+            async def get_self_entity(self, user_id_text, identity_key):
+                return dict(self.entity)
+
+            async def entity_snapshot(self, user_id_text, entity_id):
+                return dict(self.entity) if entity_id == self.entity["id"] else None
+
+            async def correct_entity(self, user_id_text, entity_id, **changes):
+                for key, value in changes.items():
+                    if value is not None and key != "type_":
+                        self.entity[key if key != "type_" else "type"] = value
+                return {"id": self.entity["id"], "name": self.entity["name"]}
+
+        class _AuditRepo:
+            records = {}
+
+            def __init__(self, session):
+                self.session = session
+
+            async def get_for_user(self, user_id_text, operation_id):
+                return self.records.get(operation_id)
+
+            async def create_confirmed(self, **kwargs):
+                record = SimpleNamespace(
+                    id=uuid.uuid4(),
+                    user_id=kwargs["user_id"],
+                    plan_id=kwargs["plan_id"],
+                    operation_id=kwargs["operation_id"],
+                    request=kwargs["request"],
+                    operation_kind=kwargs["operation_kind"],
+                    risk=kwargs["risk"],
+                    requires_confirmation=kwargs["requires_confirmation"],
+                    status="confirmed",
+                    before=kwargs["before"],
+                    after=None,
+                    error=None,
+                    confirmed_at=datetime.now(timezone.utc),
+                    executed_at=None,
+                    undone_at=None,
+                    created_at=datetime.now(timezone.utc),
+                )
+                self.records[kwargs["operation_id"]] = record
+                return record
+
+            async def mark_executed(self, record, after):
+                record.status = "executed"
+                record.after = after
+                record.executed_at = datetime.now(timezone.utc)
+                return record
+
+            async def mark_undone(self, record):
+                record.status = "undone"
+                record.undone_at = datetime.now(timezone.utc)
+                return record
+
+        graph_repo = _GraphRepo()
+        service = MemoryCurationService(repo=graph_repo, session=object())
+        plan = await service.plan(user_id, "我叫林夕")
+
+        with patch(
+            "app.services.memory_curation_service.MemoryCurationRepository", _AuditRepo
+        ):
+            tampered = copy.deepcopy(plan)
+            tampered["operations"][0]["patch"]["name"] = "恶意修改"
+            with self.assertRaises(BizError):
+                await service.execute(
+                    user_id, tampered, plan["confirmation_token"], confirmed=True
+                )
+            with self.assertRaises(BizError):
+                await service.execute(
+                    user_id, plan, plan["confirmation_token"], confirmed=False
+                )
+            executed = await service.execute(
+                user_id, plan, plan["confirmation_token"], confirmed=True
+            )
+            self.assertEqual(executed["status"], "executed")
+            self.assertEqual(graph_repo.entity["name"], "林夕")
+            replayed = await service.execute(
+                user_id, plan, plan["confirmation_token"], confirmed=True
+            )
+            self.assertEqual(replayed["operations"][0]["status"], "executed")
+            self.assertEqual(graph_repo.entity["name"], "林夕")
+            undone = await service.undo(user_id, plan["operations"][0]["operation_id"])
+
+        self.assertEqual(undone["status"], "undone")
+        self.assertEqual(graph_repo.entity["name"], "旧名字")
 
 
 if __name__ == "__main__":

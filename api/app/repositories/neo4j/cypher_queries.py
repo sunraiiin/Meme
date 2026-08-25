@@ -164,6 +164,8 @@ RETURN count(r) AS cnt
 
 ENTITY_LIST_BY_TYPE = """
 MATCH (e:Entity {user_id: $user_id, type: $type})
+WHERE coalesce(e.is_active, true) = true
+  AND coalesce(e.is_invalidated, false) = false
 RETURN e.id AS id, e.name AS name, e.type AS type,
        e.description AS description, e.aliases AS aliases,
        e.identity_key AS identity_key, coalesce(e.is_self, false) AS is_self,
@@ -172,9 +174,11 @@ RETURN e.id AS id, e.name AS name, e.type AS type,
 
 ENTITY_GET_SELF = """
 MATCH (e:Entity {user_id: $user_id})
-WHERE e.identity_key = $identity_key
+WHERE (e.identity_key = $identity_key
    OR coalesce(e.is_self, false) = true
-   OR (e.name = '用户' AND e.type = '生命体')
+   OR (e.name = '用户' AND e.type = '生命体'))
+  AND coalesce(e.is_active, true) = true
+  AND coalesce(e.is_invalidated, false) = false
 RETURN e.id AS id, e.name AS name, e.type AS type,
        e.description AS description, e.aliases AS aliases,
        e.identity_key AS identity_key, coalesce(e.is_self, false) AS is_self,
@@ -190,6 +194,8 @@ LIMIT 1
 
 ENTITY_GET_BY_NAME = """
 MATCH (e:Entity {user_id: $user_id, name: $name})
+WHERE coalesce(e.is_active, true) = true
+  AND coalesce(e.is_invalidated, false) = false
 RETURN e.id AS id, e.name AS name, e.type AS type,
        e.description AS description, e.aliases AS aliases,
        e.identity_key AS identity_key, coalesce(e.is_self, false) AS is_self
@@ -205,6 +211,8 @@ ENTITY_VECTOR_SEARCH = """
 CALL db.index.vector.queryNodes('entity_embedding_index', $top_k, $vector)
 YIELD node, score
 WHERE node.user_id = $user_id
+  AND coalesce(node.is_active, true) = true
+  AND coalesce(node.is_invalidated, false) = false
 RETURN node.id AS id, node.name AS name, node.type AS type,
        node.description AS description, node.aliases AS aliases,
        node.identity_key AS identity_key, coalesce(node.is_self, false) AS is_self,
@@ -220,6 +228,8 @@ ENTITY_FULLTEXT_SEARCH = """
 CALL db.index.fulltext.queryNodes('entity_fulltext', $query)
 YIELD node, score
 WHERE node.user_id = $user_id
+  AND coalesce(node.is_active, true) = true
+  AND coalesce(node.is_invalidated, false) = false
 RETURN node.id AS id, node.name AS name, node.type AS type,
        node.description AS description, node.aliases AS aliases,
        node.identity_key AS identity_key, coalesce(node.is_self, false) AS is_self,
@@ -299,6 +309,8 @@ ENTITY_NEIGHBORS = """
 MATCH (e:Entity {user_id: $user_id})
 WHERE e.id IN $entity_ids
 OPTIONAL MATCH (e)-[r:RELATION]-(o:Entity {user_id: $user_id})
+WHERE o IS NULL
+   OR (coalesce(o.is_active, true) = true AND coalesce(o.is_invalidated, false) = false)
 OPTIONAL MATCH (st:Statement {user_id: $user_id, id: r.statement_id})
 RETURN e.id AS entity_id, e.name AS entity_name,
        CASE WHEN r IS NULL THEN NULL
@@ -328,11 +340,44 @@ RETURN e.id AS entity_id, e.name AS entity_name,
        coalesce(e.is_self, false) AS matched_is_self
 """
 
+# 创建或更新 canonical self；首次整理个人身份时不依赖普通实体去重。
+SELF_ENSURE = """
+MERGE (e:Entity {user_id: $user_id, identity_key: $identity_key})
+ON CREATE SET e.id = $entity_id,
+              e.name = $name,
+              e.type = '生命体',
+              e.description = '当前用户本人',
+              e.aliases = $aliases,
+              e.is_self = true,
+              e.is_active = true,
+              e.is_invalidated = false,
+              e.importance = 1.0,
+              e.confidence = 1.0,
+              e.memory_layer = 'long_term',
+              e.created_at = $created_at
+SET e.name = $name,
+    e.aliases = $aliases,
+    e.identity_key = $identity_key,
+    e.is_self = true,
+    e.is_active = true,
+    e.is_invalidated = false,
+    e.merged_into = NULL
+RETURN e.id AS id, e.name AS name, e.type AS type,
+       e.description AS description, e.aliases AS aliases,
+       e.identity_key AS identity_key, coalesce(e.is_self, false) AS is_self,
+       coalesce(e.is_active, true) AS is_active,
+       coalesce(e.is_invalidated, false) AS is_invalidated
+"""
+
 # ── 画像视图：列出用户全部实体（含每个实体的一跳出边关系，供卡片展示） ──
 
 ENTITY_LIST_ALL = """
 MATCH (e:Entity {user_id: $user_id})
+WHERE coalesce(e.is_active, true) = true
+  AND coalesce(e.is_invalidated, false) = false
 OPTIONAL MATCH (e)-[r:RELATION]->(o:Entity)
+WHERE o IS NULL
+   OR (coalesce(o.is_active, true) = true AND coalesce(o.is_invalidated, false) = false)
 WITH e, collect({
   predicate: r.predicate,
   object_name: o.name,
@@ -392,7 +437,15 @@ SET e.name = coalesce($name, e.name),
     e.aliases = coalesce($aliases, e.aliases),
     e.human_verified = true,
     e.human_verified_at = datetime(),
-    e.confidence = 1.0
+    e.confidence = 1.0,
+    e.is_active = CASE WHEN $is_active IS NULL THEN coalesce(e.is_active, true) ELSE $is_active END,
+    e.is_invalidated = CASE
+        WHEN $is_invalidated IS NULL THEN coalesce(e.is_invalidated, false)
+        ELSE $is_invalidated END,
+    e.merged_into = CASE
+        WHEN $clear_merged = true THEN NULL
+        WHEN $merged_into IS NULL THEN e.merged_into
+        ELSE $merged_into END
 RETURN e.id AS id, e.name AS name, e.type AS type
 """
 
@@ -402,9 +455,28 @@ MATCH (e:Entity {user_id: $user_id, id: $entity_id})
 RETURN e.id AS id, e.name AS name, e.type AS type,
        e.description AS description, e.aliases AS aliases,
        e.identity_key AS identity_key, coalesce(e.is_self, false) AS is_self,
+       coalesce(e.is_active, true) AS is_active,
+       coalesce(e.is_invalidated, false) AS is_invalidated,
+       e.merged_into AS merged_into,
        coalesce(e.confidence, 0.8) AS confidence,
        coalesce(e.memory_layer, 'short_term') AS memory_layer,
        coalesce(e.human_verified, false) AS human_verified
+"""
+
+# 合并保留来源：重复节点标记为 inactive，不硬删除；实体关系和陈述来源仍保留。
+MERGE_ENTITY_MARK = """
+MATCH (keeper:Entity {user_id: $user_id, id: $keeper_id})
+MATCH (dup:Entity {user_id: $user_id, id: $duplicate_id})
+WHERE keeper.id <> dup.id
+WITH keeper, dup,
+     coalesce(keeper.aliases, []) + coalesce(dup.aliases, []) + [dup.name] AS candidates
+SET keeper.aliases = reduce(acc = [], item IN candidates |
+    CASE WHEN item IS NULL OR item = keeper.name OR item IN acc
+         THEN acc ELSE acc + item END),
+    dup.is_active = false,
+    dup.is_invalidated = false,
+    dup.merged_into = keeper.id
+RETURN keeper.id AS keeper_id, dup.id AS duplicate_id
 """
 
 # ── 社区聚类（阶段7）──

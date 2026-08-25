@@ -232,6 +232,23 @@ class MemoryGraphRepository:
             record = await result.single()
             return dict(record) if record else None
 
+    async def ensure_self_entity(
+        self, user_id: str, identity_key: str, name: str, aliases: list[str]
+    ) -> dict[str, Any] | None:
+        """创建或更新 canonical self，不创建普通姓名实体。"""
+        async with self._driver.session() as session:
+            result = await session.run(
+                cq.SELF_ENSURE,
+                user_id=user_id,
+                identity_key=identity_key,
+                entity_id=f"self:{user_id}",
+                name=name,
+                aliases=aliases,
+                created_at=datetime.now().isoformat(),
+            )
+            record = await result.single()
+            return dict(record) if record else None
+
     # ── 检索：向量 / 全文 / 邻居遍历 ──
 
     async def search_entities_by_vector(
@@ -384,6 +401,10 @@ class MemoryGraphRepository:
         type_: str | None = None,
         description: str | None = None,
         aliases: list[str] | None = None,
+        is_active: bool | None = None,
+        is_invalidated: bool | None = None,
+        merged_into: str | None = None,
+        clear_merged: bool = False,
     ) -> dict[str, Any] | None:
         """修正实体属性(用户视角的「✏️ 修正」)。任一字段 None 表示不改。"""
         async with self._driver.session() as session:
@@ -395,9 +416,39 @@ class MemoryGraphRepository:
                 type=type_,
                 description=description,
                 aliases=aliases,
+                is_active=is_active,
+                is_invalidated=is_invalidated,
+                merged_into=merged_into,
+                clear_merged=clear_merged,
             )
             record = await result.single()
             return dict(record) if record else None
+
+    async def merge_entities(
+        self, user_id: str, keeper_id: str, duplicate_id: str
+    ) -> bool:
+        """逻辑合并两个实体并保留来源；重复实体被标 inactive 而非硬删除。"""
+
+        async def _txn(tx):
+            result = await tx.run(
+                cq.MERGE_ENTITY_MARK,
+                user_id=user_id,
+                keeper_id=keeper_id,
+                duplicate_id=duplicate_id,
+            )
+            if await result.single() is None:
+                return False
+            for query in (
+                cq.DEDUP_REDIRECT_MENTIONS,
+                cq.DEDUP_REDIRECT_INVOLVES,
+                cq.DEDUP_REDIRECT_RELATION_OUT,
+                cq.DEDUP_REDIRECT_RELATION_IN,
+            ):
+                await tx.run(query, user_id=user_id, keeper_id=keeper_id, dup_ids=[duplicate_id])
+            return True
+
+        async with self._driver.session() as session:
+            return await session.execute_write(_txn)
 
     async def delete_user_graph(self, user_id: str) -> None:
         """删除某用户的全部图数据（数据隔离 / 重置用）。"""
