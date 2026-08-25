@@ -11,7 +11,12 @@ from app.core.dependencies import get_current_user
 from app.core.response import success
 from app.db.postgres import get_session
 from app.models.user_model import User
-from app.schemas.memory_schema import MemorySearchRequest, RememberRequest
+from app.schemas.memory_schema import (
+    MemoryCurationPlanRequest,
+    MemorySearchRequest,
+    RememberRequest,
+)
+from app.services.memory_curation_service import MemoryCurationService
 from app.services.memory_service import MemoryService
 
 router = APIRouter(prefix="/memories", tags=["memory"])
@@ -36,6 +41,16 @@ async def search_memory(
 ):
     hits = await MemoryService(session).search(user.id, body.query, body.top_k)
     return success(hits)
+
+
+@router.post("/curation/plan")
+async def plan_memory_curation(
+    body: MemoryCurationPlanRequest,
+    user: User = Depends(get_current_user),
+):
+    """把自然语言整理请求转成只读、可审阅的结构化计划。"""
+    plan = await MemoryCurationService().plan(user.id, body.request)
+    return success(plan)
 
 
 @router.get("/profile")
