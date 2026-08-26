@@ -5,6 +5,7 @@
 ## 当前基线
 
 - [现有系统与功能依赖地图](architecture/CURRENT-SYSTEM.md)
+- [数据库表与字段目录](architecture/DATABASE-SCHEMA.md)
 - [功能保留、隐藏、删除与重设计决策](refactor/FEATURE-DECISIONS.md)
 - [目标架构与分阶段实施计划](refactor/TARGET-ARCHITECTURE.md)
 - [ADR-0001：项目功能范围决策](decisions/0001-product-scope.md)
