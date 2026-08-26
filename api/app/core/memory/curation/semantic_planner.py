@@ -5,6 +5,7 @@ tokens, or Cypher. Those fields are derived by deterministic code after validati
 """
 from __future__ import annotations
 
+import re
 from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field, ValidationError
@@ -43,6 +44,12 @@ _SYSTEM_PROMPT = """你是 Meme 的记忆整理意图解析器。你的唯一任
 {"status":"ready|rejected","message":"简短说明","operation":{"kind":"操作名","target_name":null,"secondary_target_name":null,"value":null,"reason":"解析依据"}}
 rejected 时 operation 必须为 null。
 """
+
+_TECHNICAL_ID_RE = re.compile(
+    r"(?<![A-Za-z0-9])(?:[0-9a-fA-F]{32}|"
+    r"[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-"
+    r"[0-9a-fA-F]{4}-[0-9a-fA-F]{12})(?![A-Za-z0-9])"
+)
 
 
 class SemanticOperationCandidate(BaseModel):
@@ -157,13 +164,20 @@ async def build_semantic_curation_plan(
     client: LLMClient, request: str
 ) -> CurationPlan:
     """Convert one natural-language request into a validated white-list plan."""
+    if _TECHNICAL_ID_RE.search(request):
+        return _rejected(
+            request,
+            "请使用实体名称描述整理目标，不要输入内部实体 ID。",
+        )
     answer = await client.chat(
         [
             {"role": "system", "content": _SYSTEM_PROMPT},
             {"role": "user", "content": request},
         ],
         temperature=0.0,
-        max_tokens=500,
+        # 推理模型可能先消耗一部分输出预算生成 reasoning_content；预算过小会让
+        # OpenAI 兼容接口最终返回空 content，导致本可执行的计划解析失败。
+        max_tokens=1200,
     )
     data = parse_json_object(answer)
     if not data:

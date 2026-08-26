@@ -198,7 +198,7 @@ export interface CurationOperation {
   secondary_target_snapshot: Record<string, unknown> | null
   patch: Record<string, unknown>
   reason: string | null
-  target_status: 'not_needed' | 'resolved' | 'will_create' | 'not_found'
+  target_status: 'not_needed' | 'resolved' | 'will_create' | 'not_found' | 'ambiguous'
 }
 
 export interface CurationPlan {

@@ -232,6 +232,19 @@ class MemoryGraphRepository:
             record = await result.single()
             return dict(record) if record else None
 
+    async def find_entities_by_name(
+        self, user_id: str, name: str, limit: int = 10
+    ) -> list[dict[str, Any]]:
+        """按名称或别名查找全部候选，供修改前检测同名歧义。"""
+        async with self._driver.session() as session:
+            result = await session.run(
+                cq.ENTITY_FIND_BY_NAME,
+                user_id=user_id,
+                name=name,
+                limit=max(1, min(limit, 20)),
+            )
+            return [dict(record) async for record in result]
+
     async def ensure_self_entity(
         self, user_id: str, identity_key: str, name: str, aliases: list[str]
     ) -> dict[str, Any] | None:

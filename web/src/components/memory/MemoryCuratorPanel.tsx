@@ -67,6 +67,7 @@ function targetStatusLabel(status: CurationOperation['target_status']) {
   if (status === 'resolved') return '已找到目标'
   if (status === 'will_create') return '将创建或补全身份'
   if (status === 'not_found') return '未找到目标'
+  if (status === 'ambiguous') return '找到多个同名目标'
   return '无需查找目标'
 }
 
@@ -74,6 +75,34 @@ function formatTime(value: string | null | undefined) {
   if (!value) return '—'
   const date = new Date(value)
   return Number.isNaN(date.getTime()) ? value : date.toLocaleString()
+}
+
+function EntitySnapshotSummary({
+  label,
+  snapshot,
+}: {
+  label: string
+  snapshot: Record<string, unknown>
+}) {
+  const name = typeof snapshot.name === 'string' ? snapshot.name : '未命名'
+  const type = typeof snapshot.type === 'string' ? snapshot.type : '未分类'
+  const description = typeof snapshot.description === 'string' ? snapshot.description : ''
+  const aliases = Array.isArray(snapshot.aliases)
+    ? snapshot.aliases.filter((item): item is string => typeof item === 'string')
+    : []
+
+  return (
+    <div style={{ marginTop: 10, padding: '8px 10px', borderRadius: 6, background: '#fafafa' }}>
+      <Space direction="vertical" size={2}>
+        <Text>
+          <Text strong>{label}：</Text>
+          {name} <Text type="secondary">（{type}）</Text>
+        </Text>
+        {description && <Text type="secondary">{description}</Text>}
+        {aliases.length > 0 && <Text type="secondary">别名：{aliases.join('、')}</Text>}
+      </Space>
+    </div>
+  )
 }
 
 export default function MemoryCuratorPanel() {
@@ -322,12 +351,18 @@ function PlanPreview({
             <Space wrap>
               <Tag>{KIND_LABEL[operation.kind]}</Tag>
               <Tag color={operationRisk.color}>{operationRisk.label}</Tag>
-              <Tag color={operation.target_status === 'not_found' ? 'error' : 'processing'}>
+              <Tag color={operation.target_status === 'not_found' || operation.target_status === 'ambiguous' ? 'error' : 'processing'}>
                 {targetStatusLabel(operation.target_status)}
               </Tag>
             </Space>
             <Paragraph style={{ margin: '10px 0 4px' }}>{operation.summary}</Paragraph>
             {operation.reason && <Text type="secondary">解析依据：{operation.reason}</Text>}
+            {operation.target_snapshot && (
+              <EntitySnapshotSummary label="当前目标" snapshot={operation.target_snapshot} />
+            )}
+            {operation.secondary_target_snapshot && (
+              <EntitySnapshotSummary label="将被合并的目标" snapshot={operation.secondary_target_snapshot} />
+            )}
           </Card>
         )
       })}

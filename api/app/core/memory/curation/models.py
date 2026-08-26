@@ -38,9 +38,9 @@ class CurationOperation(BaseModel):
     secondary_target_snapshot: dict[str, Any] | None = None
     patch: dict[str, Any] = Field(default_factory=dict)
     reason: str | None = None
-    target_status: Literal["not_needed", "resolved", "will_create", "not_found"] = (
-        "not_needed"
-    )
+    target_status: Literal[
+        "not_needed", "resolved", "will_create", "not_found", "ambiguous"
+    ] = "not_needed"
 
 
 class CurationPlan(BaseModel):
