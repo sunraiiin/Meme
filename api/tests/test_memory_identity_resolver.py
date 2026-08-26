@@ -3,6 +3,7 @@ import unittest
 
 from app.core.memory.extraction.identity import (
     extract_identity_signals,
+    is_self_identity_question,
     normalize_entity_pool,
 )
 from app.core.memory.extraction.dedup import merge_with_graph
@@ -26,6 +27,43 @@ class _Repo:
 
 
 class MemoryIdentityResolverTests(unittest.IsolatedAsyncioTestCase):
+    async def test_name_question_does_not_create_identity_signal(self):
+        for text in ("我叫什么名字？", "你知道我叫什么吗？", "我的姓名是什么？", "我是谁？"):
+            with self.subTest(text=text):
+                signals = extract_identity_signals(text)
+                self.assertFalse(signals.explicit_self)
+                self.assertTrue(is_self_identity_question(text))
+
+    async def test_explicit_name_with_followup_question_remains_a_declaration(self):
+        signals = extract_identity_signals("我叫林夕，你记得吗？")
+
+        self.assertEqual(signals.current_names, ("林夕",))
+        self.assertFalse(is_self_identity_question("我叫林夕，你记得吗？"))
+
+    async def test_identity_question_does_not_hide_another_assertion(self):
+        self.assertFalse(is_self_identity_question("我喜欢音乐，你知道我叫什么名字吗？"))
+
+    async def test_corrupted_question_name_recovers_from_unique_valid_alias(self):
+        existing = {
+            "id": "self-existing",
+            "name": "什么名字",
+            "aliases": ["我", "用户", "林夕"],
+            "identity_key": "self:u1",
+            "is_self": True,
+        }
+        entity = EntityNode(user_id="u1", name="用户", type="生命体")
+
+        normalized, redirect = await normalize_entity_pool(
+            repo=_Repo(existing),
+            user_id="u1",
+            text="用户这个月观看了一场演出。",
+            entities=[entity],
+        )
+
+        self.assertEqual(normalized[0].name, "林夕")
+        self.assertNotIn("什么名字", normalized[0].aliases)
+        self.assertEqual(redirect[entity.id], "self-existing")
+
     async def test_explicit_name_collapses_user_and_alias_into_one_self(self):
         entities = [
             EntityNode(user_id="u1", name="用户", type="生命体"),

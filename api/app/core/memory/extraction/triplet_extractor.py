@@ -25,15 +25,18 @@ def _norm_time(value: str | None) -> str:
     return str(value)
 
 
-async def extract_triplets(
+def _is_empty(result: TripletExtractionResult) -> bool:
+    return not (result.entities or result.triplets or result.events)
+
+
+async def _extract_once(
     client: LLMClient,
     statement: ExtractedStatement,
-    context: str | None = None,
-    dialog_at: str | None = None,
-) -> TripletExtractionResult:
-    """从单条陈述抽取实体与三元组。"""
-    if statement.has_unsolved_reference:
-        return TripletExtractionResult()
+    context: str | None,
+    dialog_at: str | None,
+    *,
+    retry: bool,
+) -> tuple[TripletExtractionResult, int]:
     prompt = render_prompt(
         "extract_triplet.jinja2",
         statement=statement.statement,
@@ -43,16 +46,57 @@ async def extract_triplets(
         valid_at="NULL",
         invalid_at="NULL",
         dialog_at=_norm_time(dialog_at),
+        retry=retry,
     )
+    answer = await client.chat(
+        [{"role": "user", "content": prompt}],
+        temperature=0.0 if retry else 0.1,
+        max_tokens=2048,
+    )
+    data = parse_json_object(answer)
+    return TripletExtractionResult.model_validate(data), len(answer or "")
+
+
+async def extract_triplets(
+    client: LLMClient,
+    statement: ExtractedStatement,
+    context: str | None = None,
+    dialog_at: str | None = None,
+) -> TripletExtractionResult:
+    """从单条陈述抽取实体与三元组。"""
+    if statement.has_unsolved_reference or not statement.statement.strip():
+        return TripletExtractionResult()
     try:
-        answer = await client.chat(
-            [{"role": "user", "content": prompt}], temperature=0.1, max_tokens=2048
+        result, answer_length = await _extract_once(
+            client, statement, context, dialog_at, retry=False
         )
-        data = parse_json_object(answer)
-        return TripletExtractionResult.model_validate(data)
     except Exception as e:
         logger.warning("三元组萃取失败（忽略该句）: %r", e)
         return TripletExtractionResult()
+
+    if not _is_empty(result) or statement.statement_type.upper() != "FACT":
+        return result
+
+    logger.warning(
+        "三元组萃取首次返回空结果，执行一次复核: statement_chars=%d response_chars=%d",
+        len(statement.statement),
+        answer_length,
+    )
+    try:
+        retry_result, retry_answer_length = await _extract_once(
+            client, statement, context, dialog_at, retry=True
+        )
+    except Exception as e:
+        logger.warning("三元组萃取复核失败（忽略该句）: %r", e)
+        return TripletExtractionResult()
+
+    if _is_empty(retry_result):
+        logger.warning(
+            "三元组萃取复核仍为空: statement_chars=%d response_chars=%d",
+            len(statement.statement),
+            retry_answer_length,
+        )
+    return retry_result
 
 
 async def extract_triplets_batch(
