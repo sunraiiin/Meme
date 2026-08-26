@@ -20,7 +20,12 @@ def _clean_name(value: str) -> str:
 
 
 def _rejected(request: str, message: str) -> CurationPlan:
-    return CurationPlan(request=request, status="rejected", message=message)
+    return CurationPlan(
+        request=request,
+        status="rejected",
+        message=message,
+        executable=False,
+    )
 
 
 def _self_name_operation(request: str) -> CurationPlan | None:

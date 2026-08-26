@@ -19,6 +19,7 @@ OperationKind = Literal[
 ]
 RiskLevel = Literal["low", "medium", "high"]
 PlanStatus = Literal["ready", "rejected"]
+PlannerSource = Literal["rules", "llm"]
 
 
 class CurationOperation(BaseModel):
@@ -49,6 +50,7 @@ class CurationPlan(BaseModel):
     request: str
     status: PlanStatus
     message: str
+    planner_source: PlannerSource = "rules"
     operations: list[CurationOperation] = Field(default_factory=list)
     risk: RiskLevel = "low"
     requires_confirmation: bool = False
@@ -59,4 +61,10 @@ class CurationPlan(BaseModel):
     confirmation_token: str | None = None
 
 
-__all__ = ["CurationOperation", "CurationPlan", "OperationKind", "RiskLevel"]
+__all__ = [
+    "CurationOperation",
+    "CurationPlan",
+    "OperationKind",
+    "PlannerSource",
+    "RiskLevel",
+]

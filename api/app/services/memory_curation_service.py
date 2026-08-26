@@ -12,11 +12,15 @@ from app.config import settings
 from app.core.exceptions import BizError
 from app.core.memory.curation.models import CurationOperation, CurationPlan
 from app.core.memory.curation.planner import build_curation_plan
+from app.core.memory.curation.semantic_planner import build_semantic_curation_plan
 from app.core.memory.extraction.identity import self_identity_key
+from app.core.logging import get_logger
+from app.core.llm.resolver import get_optional_client_for_type
 from app.repositories.memory_curation_repository import MemoryCurationRepository
 from app.repositories.neo4j.memory_graph_repository import MemoryGraphRepository
 
 _PLAN_TTL = timedelta(minutes=10)
+logger = get_logger(__name__)
 
 
 def _snapshot(entity: dict[str, Any] | None) -> dict[str, Any] | None:
@@ -121,6 +125,13 @@ class MemoryCurationService:
     async def plan(self, user_id: uuid.UUID, request: str) -> dict[str, Any]:
         """读取目标快照并签发短期确认令牌；此方法本身不写数据。"""
         plan = build_curation_plan(request)
+        if plan.status == "rejected" and self.session is not None:
+            try:
+                client = await get_optional_client_for_type(self.session, user_id, "chat")
+                if client is not None:
+                    plan = await build_semantic_curation_plan(client, request)
+            except Exception as exc:  # noqa: BLE001
+                logger.warning("记忆管家语义规划失败，保留规则拒绝结果: %s", exc)
         if plan.status == "rejected" or not plan.operations:
             return plan.model_dump(mode="json")
 
