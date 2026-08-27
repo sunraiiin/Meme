@@ -1,6 +1,13 @@
 import asyncio
+import tempfile
 import unittest
+from pathlib import Path
 
+from eval.benchmarks.hotpotqa.runner import (
+    _embedding_chunks,
+    _load_checkpoint,
+    _write_checkpoint,
+)
 from eval.run_manifest import fixture_counts, fixtures_sha256
 from eval.stats import bootstrap_mean_ci, latency_summary, percentile
 from eval.tasks.identity import eval_identity
@@ -37,6 +44,25 @@ class EvalEvidenceTests(unittest.TestCase):
         self.assertEqual(row["UnsafeSelfLinkRate"], 0.0)
         self.assertEqual(row["StableSelfRate"], 1.0)
         self.assertEqual(len(details), 9)
+
+    def test_hotpot_long_sentence_is_split_before_embedding(self):
+        chunks = _embedding_chunks("x" * 4500)
+
+        self.assertEqual([len(chunk) for chunk in chunks], [2000, 2000, 500])
+
+    def test_hotpot_checkpoint_is_atomic_and_retries_error_rows(self):
+        signature = {"sample": 2, "seed": 42}
+        details = [
+            {"qid": "ok", "em": 1.0},
+            {"qid": "retry", "em": 0.0, "error": {"type": "Timeout"}},
+        ]
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "checkpoint.json"
+            _write_checkpoint(path, signature, details)
+
+            restored = _load_checkpoint(path, signature)
+
+        self.assertEqual([row["qid"] for row in restored], ["ok"])
 
 
 if __name__ == "__main__":

@@ -10,12 +10,17 @@
 from __future__ import annotations
 
 import asyncio
+import hashlib
+import json
 import re
 import string
+import time
 import uuid
 from collections import Counter
+from pathlib import Path
 from typing import Any
 
+from app.core.rag.chunker import chunk_parent_child
 from app.core.rag.es_index import CHUNK_TYPE_CHILD, CHUNKS_INDEX, ensure_index
 from app.core.rag.es_store import build_chunk_doc, bulk_index
 from app.db.elastic import get_es
@@ -25,12 +30,14 @@ from eval import metrics as M
 from eval.benchmarks._common import write_benchmark_details, write_benchmark_report
 from eval.benchmarks.hotpotqa.loader import load
 from eval.benchmarks.hotpotqa.qa_verifier import judge_qa
-from eval.stats import bootstrap_mean_ci
+from eval.stats import bootstrap_mean_ci, latency_summary
 
 K_RETRIEVE = 4  # 每题检索 top-4 段落给 chat 答（distractor 共 10 段，2 段是 gold）
 
 # 命名空间根：每题 user_id = uuid5(NS_HOTPOT, qid)
 _NS_HOTPOT = uuid.UUID("eee30000-0000-0000-0000-0000000000c3")
+_CHECKPOINT_DIR = Path(__file__).parents[2] / "results" / "rag" / "checkpoints"
+_MAX_EMBED_CHARS = 2000
 
 
 def _qid_to_uid(qid: str) -> str:
@@ -68,17 +75,40 @@ def _f1(pred: str, gold: str) -> float:
 
 # ── 灌入与检索 ──
 
+def _embedding_chunks(content: str) -> list[str]:
+    chunks = [
+        child
+        for parent in chunk_parent_child(content)
+        for child in parent.children
+    ] or [content]
+    return [
+        part
+        for chunk in chunks
+        for part in (
+            [
+                chunk[i:i + _MAX_EMBED_CHARS]
+                for i in range(0, len(chunk), _MAX_EMBED_CHARS)
+            ] or [chunk]
+        )
+    ]
+
+
 async def _ingest_one(embed_client, qid: str, paragraphs: list[dict]) -> None:
-    """把单题的 10 段灌进 ES（child 粒度即可，段落本身就短）。"""
+    """把单题的 10 段按生产子块粒度灌进 ES。
+
+    HotpotQA 大多段落较短，但存在超长句子。直接将整段交给 embedding
+    会触发 provider 400；这里复用业务父子分块，并对超长单句做最后的字符长度保护。
+    多个子块仍共用 source_id=title，指标仍按段落标题去重计算。
+    """
     uid = _qid_to_uid(qid)
     es_docs: list[dict] = []
-    # 批量算向量
-    texts = []
-    titles = []
+    texts: list[str] = []
+    titles: list[str] = []
     for p in paragraphs:
         content = " ".join(p["sentences"])
-        texts.append(content)
-        titles.append(p["title"])
+        safe_chunks = _embedding_chunks(content)
+        texts.extend(safe_chunks)
+        titles.extend([p["title"]] * len(safe_chunks))
     vectors = await embed_client.embed(texts) if texts else []
     for title, content, vec in zip(titles, texts, vectors):
         es_docs.append(build_chunk_doc(
@@ -88,6 +118,54 @@ async def _ingest_one(embed_client, qid: str, paragraphs: list[dict]) -> None:
         ))
     if es_docs:
         await bulk_index(es_docs)
+
+
+def _checkpoint_signature(
+    *, sample: int, seed: int, verifier: str, embed_model: str,
+    chat_model: str, verifier_models: list[str],
+) -> dict:
+    return {
+        "sample": sample,
+        "seed": seed,
+        "verifier": verifier,
+        "embed_model": embed_model,
+        "chat_model": chat_model,
+        "verifier_models": verifier_models,
+    }
+
+
+def _checkpoint_path(signature: dict) -> Path:
+    raw = json.dumps(signature, ensure_ascii=True, sort_keys=True).encode()
+    digest = hashlib.sha256(raw).hexdigest()[:12]
+    _CHECKPOINT_DIR.mkdir(parents=True, exist_ok=True)
+    return _CHECKPOINT_DIR / f"hotpotqa-{digest}.json"
+
+
+def _load_checkpoint(path: Path, signature: dict) -> list[dict]:
+    if not path.exists():
+        return []
+    try:
+        body = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return []
+    if body.get("signature") != signature:
+        return []
+    # 出错题不视为已完成，续跑时会再尝试。
+    return [row for row in body.get("details", []) if not row.get("error")]
+
+
+def _write_checkpoint(
+    path: Path, signature: dict, details: list[dict], *, completed: bool = False,
+) -> None:
+    body = {
+        "signature": signature,
+        "completed": completed,
+        "completed_items": len(details),
+        "details": details,
+    }
+    tmp = path.with_suffix(".tmp")
+    tmp.write_text(json.dumps(body, ensure_ascii=False, indent=2), encoding="utf-8")
+    tmp.replace(path)
 
 
 async def _clear_one(qid: str) -> None:
@@ -193,6 +271,7 @@ async def run_benchmark(
     sample: int = 500,
     verifier: str = "none",
     seed: int = 42,
+    resume: bool = False,
     verifier_client_factory=None,
     run_manifest: dict | None = None,
 ) -> tuple[dict, list]:
@@ -251,24 +330,57 @@ async def run_benchmark(
     verifier_passes: dict[str, list[int]] = {
         kind: [] for kind in judge_clients
     }
-    details: list[dict] = []
+    signature = _checkpoint_signature(
+        sample=sample,
+        seed=seed,
+        verifier=verifier,
+        embed_model=embed_client.model_name,
+        chat_model=chat_client.model_name,
+        verifier_models=[
+            f"{kind}:{client.model_name}" for kind, client in judge_clients.items()
+        ],
+    )
+    checkpoint_path = _checkpoint_path(signature)
+    details: list[dict] = (
+        _load_checkpoint(checkpoint_path, signature) if resume else []
+    )
+    if details:
+        print(f"  [resume] 已恢复 {len(details)} 题: {checkpoint_path}")
+    for row in details:
+        em_list.append(float(row["em"]))
+        f1_list.append(float(row["f1"]))
+        retr_recall_list.append(float(row["retrieval_recall"]))
+        for kind in judge_clients:
+            verifier_passes[kind].append(
+                int(row.get("verifier_passes", {}).get(kind, 0))
+            )
+    completed_qids = {row["qid"] for row in details}
 
     total = len(queries)
     for i, q in enumerate(queries, 1):
         qid = q["qid"]
+        if qid in completed_qids:
+            print(f"  [hotpotqa] {i}/{total}  qid={qid}  [checkpoint skip]")
+            continue
         uid = _qid_to_uid(qid)
         print(f"  [hotpotqa] {i}/{total}  qid={qid}  type={q['qtype']}")
         print(f"    Q: {q['question'][:80]}")
-        # 1. 灌入本题 10 段
-        await _ingest_one(embed_client, qid, q["paragraphs"])
-        await asyncio.sleep(0.05)  # 给 ES 一点索引时间
+        started = time.perf_counter()
         try:
+            # 1. 灌入本题 10 段
+            ingest_started = time.perf_counter()
+            await _ingest_one(embed_client, qid, q["paragraphs"])
+            ingest_ms = (time.perf_counter() - ingest_started) * 1000
+            await asyncio.sleep(0.05)  # 给 ES 一点索引时间
             # 2. 检索 top-k
-            rh = await clients.retrieve_hybrid(embed_client, uid, q["question"], 10)
+            retrieval_started = time.perf_counter()
+            # 分块后同一 title 可能命中多个 child，先多取候选再按 source_id 去重。
+            rh = await clients.retrieve_hybrid(embed_client, uid, q["question"], 50)
             if rerank_client is not None and len(rh) > K_RETRIEVE:
                 rh = await clients.rerank_sources(rerank_client, uid, q["question"], rh, K_RETRIEVE)
             else:
                 rh = rh[:K_RETRIEVE]
+            retrieval_ms = (time.perf_counter() - retrieval_started) * 1000
             # 3. 收集检索到的段落（按 source_id == title 对回 paragraphs）
             title_to_content = {p["title"]: " ".join(p["sentences"]) for p in q["paragraphs"]}
             retrieved = [(t, title_to_content.get(t, "")) for t in rh if t in title_to_content]
@@ -279,7 +391,9 @@ async def run_benchmark(
             retr_recall_list.append(retr_recall)
             print(f"    ✓ 检索 top-{K_RETRIEVE}: {rh} | 命中 gold={hits_in_topk} (Recall={retr_recall:.2f})")
             # 5. 让 chat 答
+            answer_started = time.perf_counter()
             pred = await _answer(chat_client, q["question"], retrieved)
+            answer_ms = (time.perf_counter() - answer_started) * 1000
             em = _em(pred, q["answer"])
             f1 = _f1(pred, q["answer"])
             em_list.append(em)
@@ -314,9 +428,44 @@ async def run_benchmark(
                 "em": em,
                 "f1": round(f1, 4),
                 "verifier_passes": item_verifier_passes,
+                "latency_ms": {
+                    "ingest": round(ingest_ms, 2),
+                    "retrieval": round(retrieval_ms, 2),
+                    "answer": round(answer_ms, 2),
+                    "total": round((time.perf_counter() - started) * 1000, 2),
+                },
+            })
+        except Exception as exc:  # noqa: BLE001
+            # 单题的 provider/数据异常记为 0 分并继续，不让整轮评测丢证据。
+            print(f"    ✗ 本题失败: {type(exc).__name__}: {str(exc)[:160]}")
+            em_list.append(0.0)
+            f1_list.append(0.0)
+            retr_recall_list.append(0.0)
+            for kind in judge_clients:
+                verifier_passes[kind].append(0)
+            details.append({
+                "qid": qid,
+                "question": q["question"],
+                "type": q["qtype"],
+                "gold_answer": q["answer"],
+                "gold_titles": q["gold_titles"],
+                "retrieved_topk_titles": [],
+                "retrieval_recall": 0.0,
+                "pred": "",
+                "em": 0.0,
+                "f1": 0.0,
+                "verifier_passes": {kind: 0 for kind in judge_clients},
+                "latency_ms": {
+                    "total": round((time.perf_counter() - started) * 1000, 2),
+                },
+                "error": {
+                    "type": type(exc).__name__,
+                    "message": str(exc)[:500],
+                },
             })
         finally:
             await _clear_one(qid)
+            _write_checkpoint(checkpoint_path, signature, details)
 
     # 基础指标
     em_ci = bootstrap_mean_ci(em_list, seed=seed)
@@ -330,7 +479,12 @@ async def run_benchmark(
         f"Retr Recall@{K_RETRIEVE}": M.avg(retr_recall_list),
         "Recall 95%CI": f"[{recall_ci[0]}, {recall_ci[1]}]",
         "样本数": len(em_list),
+        "失败题数": sum(1 for row in details if row.get("error")),
     }
+    base_row.update(latency_summary([
+        float(row.get("latency_ms", {}).get("total", 0.0))
+        for row in details
+    ]))
     def _judge_metrics(pass_list: list[int]) -> dict[str, float]:
         n_total = len(pass_list)
         n_pass = sum(pass_list)
@@ -419,6 +573,7 @@ async def run_benchmark(
     detail_path = write_benchmark_details(
         "hotpotqa", details, category="rag", manifest=run_manifest
     )
+    _write_checkpoint(checkpoint_path, signature, details, completed=True)
     print(f"  报告: {report}\n  明细: {detail_path}")
     return table, details
 

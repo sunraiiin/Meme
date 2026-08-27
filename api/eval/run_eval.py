@@ -161,6 +161,7 @@ async def _run_benchmark(
                 sample=args.sample,
                 verifier=args.verifier,
                 seed=args.seed,
+                resume=args.resume,
                 verifier_client_factory=lambda: verifier_client,
                 run_manifest=manifest,
             )
@@ -250,6 +251,11 @@ def main() -> None:
         default="none",
                    help="[hotpotqa] Verifier 配置（等 ② Verifier Loop 完成后启用）")
     p.add_argument("--seed", type=int, default=42, help="[hotpotqa] 采样种子")
+    p.add_argument(
+        "--resume",
+        action="store_true",
+        help="[hotpotqa] 从同参数 checkpoint 续跑（每题完成后增量保存）",
+    )
 
     asyncio.run(_run(p.parse_args()))
 
