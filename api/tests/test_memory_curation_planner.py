@@ -10,6 +10,7 @@ from app.core.memory.curation.semantic_planner import build_semantic_curation_pl
 from app.core.memory.curation.planner import build_curation_plan
 from app.core.exceptions import BizError
 from app.services.memory_curation_service import MemoryCurationService
+from app.services.memory_curation_service import _confirmation_token
 
 
 class MemoryCurationPlannerTests(unittest.TestCase):
@@ -122,6 +123,32 @@ class MemoryCurationSemanticPlannerTests(unittest.IsolatedAsyncioTestCase):
 
 
 class MemoryCurationServiceTests(unittest.IsolatedAsyncioTestCase):
+    async def test_confirmation_token_survives_browser_numeric_normalization(self):
+        plan = CurationPlan(
+            request="请把小舟作为我的另一个称呼",
+            status="ready",
+            message="已理解",
+            operations=[
+                CurationOperation(
+                    kind="add_self_alias",
+                    summary="增加个人身份别名「小舟」",
+                    risk="low",
+                    requires_confirmation=False,
+                    patch={"alias": "小舟"},
+                    target_snapshot={"confidence": 1.0, "importance": 0.9},
+                    target_status="resolved",
+                )
+            ],
+        )
+        token = _confirmation_token(plan)
+
+        # JSON.parse/JSON.stringify 会把 1.0 规范成 1。
+        browser_payload = plan.model_dump(mode="json")
+        browser_payload["operations"][0]["target_snapshot"]["confidence"] = 1
+        restored = CurationPlan.model_validate(browser_payload)
+
+        self.assertEqual(_confirmation_token(restored), token)
+
     async def test_rule_plan_does_not_call_llm(self):
         class _Repo:
             async def get_self_entity(self, user_id_text, identity_key):

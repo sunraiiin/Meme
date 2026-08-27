@@ -4,6 +4,7 @@ from __future__ import annotations
 import hashlib
 import hmac
 import json
+import math
 import uuid
 from datetime import datetime, timedelta, timezone
 from typing import Any
@@ -90,8 +91,29 @@ def _candidate_labels(candidates: list[dict[str, Any]]) -> str:
     return "、".join(labels)
 
 
+def _canonicalize_numbers(value: Any) -> Any:
+    """消除 JSON 在 Python 与浏览器之间的等值数值表示差异。
+
+    JavaScript 会把 JSON 中的 ``1.0`` 回传为 ``1``。二者业务含义相同，
+    但直接按 JSON 字节签名会产生不同 HMAC。整数值浮点数和负零在签名前
+    统一成整数，其余有限浮点数保持数值语义。
+    """
+    if isinstance(value, dict):
+        return {str(key): _canonicalize_numbers(item) for key, item in value.items()}
+    if isinstance(value, (list, tuple)):
+        return [_canonicalize_numbers(item) for item in value]
+    if isinstance(value, float):
+        if not math.isfinite(value):
+            raise ValueError("整理计划不能包含非有限数值")
+        if value == 0 or value.is_integer():
+            return int(value)
+    return value
+
+
 def _canonical_plan(plan: CurationPlan) -> str:
-    payload = plan.model_dump(mode="json", exclude={"confirmation_token"})
+    payload = _canonicalize_numbers(
+        plan.model_dump(mode="json", exclude={"confirmation_token"})
+    )
     return json.dumps(payload, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
 
 
