@@ -93,7 +93,9 @@ def _embedding_chunks(content: str) -> list[str]:
     ]
 
 
-async def _ingest_one(embed_client, qid: str, paragraphs: list[dict]) -> None:
+async def _ingest_one(
+    embed_client, qid: str, paragraphs: list[dict], *, with_vectors: bool = True
+) -> None:
     """把单题的 10 段按生产子块粒度灌进 ES。
 
     HotpotQA 大多段落较短，但存在超长句子。直接将整段交给 embedding
@@ -109,7 +111,11 @@ async def _ingest_one(embed_client, qid: str, paragraphs: list[dict]) -> None:
         safe_chunks = _embedding_chunks(content)
         texts.extend(safe_chunks)
         titles.extend([p["title"]] * len(safe_chunks))
-    vectors = await embed_client.embed(texts) if texts else []
+    vectors = (
+        await embed_client.embed(texts)
+        if texts and with_vectors
+        else [None] * len(texts)
+    )
     for title, content, vec in zip(titles, texts, vectors):
         es_docs.append(build_chunk_doc(
             user_id=uid, source_type="document", source_id=title,
@@ -121,13 +127,14 @@ async def _ingest_one(embed_client, qid: str, paragraphs: list[dict]) -> None:
 
 
 def _checkpoint_signature(
-    *, sample: int, seed: int, verifier: str, embed_model: str,
+    *, sample: int, seed: int, verifier: str, retrieval_mode: str, embed_model: str,
     chat_model: str, verifier_models: list[str],
 ) -> dict:
     return {
         "sample": sample,
         "seed": seed,
         "verifier": verifier,
+        "retrieval_mode": retrieval_mode,
         "embed_model": embed_model,
         "chat_model": chat_model,
         "verifier_models": verifier_models,
@@ -272,6 +279,7 @@ async def run_benchmark(
     verifier: str = "none",
     seed: int = 42,
     resume: bool = False,
+    retrieval_mode: str = "hybrid",
     verifier_client_factory=None,
     run_manifest: dict | None = None,
 ) -> tuple[dict, list]:
@@ -334,6 +342,7 @@ async def run_benchmark(
         sample=sample,
         seed=seed,
         verifier=verifier,
+        retrieval_mode=retrieval_mode,
         embed_model=embed_client.model_name,
         chat_model=chat_client.model_name,
         verifier_models=[
@@ -369,13 +378,23 @@ async def run_benchmark(
         try:
             # 1. 灌入本题 10 段
             ingest_started = time.perf_counter()
-            await _ingest_one(embed_client, qid, q["paragraphs"])
+            await _ingest_one(
+                embed_client,
+                qid,
+                q["paragraphs"],
+                with_vectors=retrieval_mode == "hybrid",
+            )
             ingest_ms = (time.perf_counter() - ingest_started) * 1000
             await asyncio.sleep(0.05)  # 给 ES 一点索引时间
             # 2. 检索 top-k
             retrieval_started = time.perf_counter()
             # 分块后同一 title 可能命中多个 child，先多取候选再按 source_id 去重。
-            rh = await clients.retrieve_hybrid(embed_client, uid, q["question"], 50)
+            if retrieval_mode == "hybrid":
+                rh = await clients.retrieve_hybrid(
+                    embed_client, uid, q["question"], 50
+                )
+            else:
+                rh = await clients.retrieve_bm25(uid, q["question"], 50)
             if rerank_client is not None and len(rh) > K_RETRIEVE:
                 rh = await clients.rerank_sources(rerank_client, uid, q["question"], rh, K_RETRIEVE)
             else:
@@ -551,9 +570,12 @@ async def run_benchmark(
         "rerank 模型": rerank_client.model_name if rerank_client else "(未配置)",
         "verifier 配置": verifier,
         "verifier 实际生效": judge_kind_actual,
+        "检索模式": retrieval_mode,
     }
     notes = [
         "HotpotQA distractor 评测:每题给 10 段(2 gold + 8 distractor),系统先检索 top-k 再多跳答。",
+        "hybrid 为 Meme 主链路；BM25 为不调用 embedding 的检索消融对照，"
+        "不应将二者分数混为同一口径。",
         "**污染声明**:dev 集发布于 2018 年,目前主流 LLM 训练集大概率覆盖;本评测仅用于系统设计对比"
         "(检索/Verifier 配置间),不作绝对水平断言。",
         "**EM(严格正确率)**:答案归一化后完全一致(忽略大小写/标点/the&a&an),0/1 平均即「严格答对率」。",

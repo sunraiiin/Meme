@@ -36,7 +36,9 @@ from eval.tasks import identity as t_identity
 from eval.tasks import retrieval as t_retrieval
 
 
-async def _check_models(embed, chat, rerank, need_chat: bool = True):
+async def _check_models(
+    embed, chat, rerank, need_chat: bool = True, need_embedding: bool = True
+):
     """跑评测前先确认模型真的能调通,避免灌了一半数据才发现 key/url 错。
 
     embedding 必须可用(不通直接中止);chat 视任务需要(默认必需);
@@ -46,17 +48,20 @@ async def _check_models(embed, chat, rerank, need_chat: bool = True):
     print("[check] 模型可用性自检…")
 
     # embedding(必需)—— 顺带校验维度是否与 ES 索引一致
-    try:
-        v = await embed.embed_one("评测连通性测试")
-    except Exception as e:
-        raise RuntimeError(f"embedding 模型不可用({embed.model_name}):{e}") from e
-    dim = len(v)
-    note = ""
-    if dim != settings.embedding_dims:
-        note = f"  ⚠ 维度 {dim} 与 ES 索引维度 {settings.embedding_dims} 不一致,检索会失败!请改 .env.eval 的 embedding 模型或 EMBEDDING_DIMS"
-    print(f"  ✓ embedding 可用({embed.model_name},维度 {dim})")
-    if note:
-        print(note)
+    if need_embedding:
+        try:
+            v = await embed.embed_one("评测连通性测试")
+        except Exception as e:
+            raise RuntimeError(f"embedding 模型不可用({embed.model_name}):{e}") from e
+        dim = len(v)
+        note = ""
+        if dim != settings.embedding_dims:
+            note = f"  ⚠ 维度 {dim} 与 ES 索引维度 {settings.embedding_dims} 不一致,检索会失败!请改 .env.eval 的 embedding 模型或 EMBEDDING_DIMS"
+        print(f"  ✓ embedding 可用({embed.model_name},维度 {dim})")
+        if note:
+            print(note)
+    else:
+        print("  - 当前 benchmark 为 BM25 对照，跳过 embedding 自检")
 
     # chat
     if need_chat:
@@ -162,6 +167,7 @@ async def _run_benchmark(
                 verifier=args.verifier,
                 seed=args.seed,
                 resume=args.resume,
+                retrieval_mode=args.hotpot_retrieval,
                 verifier_client_factory=lambda: verifier_client,
                 run_manifest=manifest,
             )
@@ -171,6 +177,9 @@ async def _run_benchmark(
 
 async def _run(args) -> None:
     need_chat = not (args.benchmark == "cmteb-t2")
+    need_embedding = not (
+        args.benchmark == "hotpotqa" and args.hotpot_retrieval == "bm25"
+    )
     bundle = await eval_config.build_clients(
         model_user_id=args.model_user_id,
         need_chat=need_chat,
@@ -190,7 +199,13 @@ async def _run(args) -> None:
     # 0. 模型可用性自检(除非 --skip-check)
     if not args.skip_check:
         # cmteb-t2 不强需 chat;其他都要
-        rerank = await _check_models(embed, chat, rerank, need_chat=need_chat)
+        rerank = await _check_models(
+            embed,
+            chat,
+            rerank,
+            need_chat=need_chat,
+            need_embedding=need_embedding,
+        )
 
     try:
         if args.benchmark:
@@ -245,6 +260,12 @@ def main() -> None:
     # hotpotqa 控制
     p.add_argument("--sample", type=int, default=100,
                    help="[hotpotqa] 采样题数（默认 100，分层 bridge/comparison；全量 dev 约 7400 题极重）")
+    p.add_argument(
+        "--hotpot-retrieval",
+        choices=["hybrid", "bm25"],
+        default="hybrid",
+        help="[hotpotqa] 检索模式；BM25 可作为不依赖 embedding 的消融对照",
+    )
     p.add_argument(
         "--verifier",
         choices=["none", "same", "cross", "compare"],
