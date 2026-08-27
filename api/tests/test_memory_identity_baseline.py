@@ -50,6 +50,12 @@ class MemoryIdentityBaselineTests(unittest.IsolatedAsyncioTestCase):
         self.assertNotIn("DETACH DELETE", cq.MERGE_ENTITY_MARK)
         self.assertIn("coalesce(node.is_active, true) = true", cq.ENTITY_FULLTEXT_SEARCH)
 
+    def test_graph_duplicate_cleanup_only_targets_active_entities_and_preserves_source_context(self):
+        self.assertIn("coalesce(e.is_active, true) = true", cq.DUPLICATE_ENTITY_GROUPS)
+        self.assertIn("coalesce(e.is_invalidated, false) = false", cq.DUPLICATE_ENTITY_GROUPS)
+        self.assertIn("n.stmt_type AS stmt_type", cq.GRAPH_FULL_NODES)
+        self.assertIn("n.dialog_at AS dialog_at", cq.GRAPH_FULL_NODES)
+
     def test_identity_fixture_covers_required_ambiguity_classes(self):
         rows = json.loads(_IDENTITY_FIXTURE.read_text(encoding="utf-8"))
         scenarios = {row["scenario"] for row in rows}

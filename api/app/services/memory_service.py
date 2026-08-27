@@ -471,8 +471,11 @@ class MemoryService:
         raw_edges = await repo.graph_full_edges(uid)
         communities = await CommunityRepository().list_communities(uid)
 
+        def _node_text(name: str | None) -> str:
+            return (name or "").strip().replace("\n", " ")
+
         def _disp_name(kind: str, name: str | None) -> str:
-            text = (name or "").strip().replace("\n", " ")
+            text = _node_text(name)
             if kind in ("Entity", "Event"):
                 return text
             # 溯源类节点（对话/片段/陈述）名称可能很长，截断用于标签显示
@@ -483,8 +486,19 @@ class MemoryService:
                 "id": n.get("id"),
                 "kind": n.get("kind") or "Entity",
                 "name": _disp_name(n.get("kind") or "Entity", n.get("name")),
-                "type": n.get("type"),
+                "full_name": _node_text(n.get("name")),
+                "type": n.get("type") or n.get("stmt_type"),
                 "description": n.get("description") or "",
+                "source": n.get("source"),
+                "source_message_id": n.get("source_message_id"),
+                "dialog_at": n.get("dialog_at"),
+                "created_at": n.get("created_at"),
+                "sequence": n.get("sequence"),
+                "speaker": n.get("speaker"),
+                "stmt_type": n.get("stmt_type"),
+                "temporal_type": n.get("temporal_type"),
+                "valid_at": n.get("valid_at"),
+                "invalid_at": n.get("invalid_at"),
                 "community_id": n.get("community_id"),
                 "identity_key": n.get("identity_key"),
                 "is_self": bool(n.get("is_self")),

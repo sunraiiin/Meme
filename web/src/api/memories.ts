@@ -112,10 +112,21 @@ export interface CommunityMember {
 export interface GraphNode {
   id: string
   name: string
+  full_name?: string
   type: string
   description: string
   community_id: string | null
   kind?: string // 节点大类：Entity/Event/Statement/Chunk/Dialogue
+  source?: string | null
+  source_message_id?: string | null
+  dialog_at?: string | null
+  created_at?: string | null
+  sequence?: number | null
+  speaker?: string | null
+  stmt_type?: string | null
+  temporal_type?: string | null
+  valid_at?: string | null
+  invalid_at?: string | null
   importance?: number
   memory_layer?: string
   access_count?: number

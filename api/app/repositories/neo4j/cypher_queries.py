@@ -747,6 +747,8 @@ DETACH DELETE c
 # 找出重复实体组：返回每组 [ids...]（按 created_at 升序，第一个作保留方）
 DUPLICATE_ENTITY_GROUPS = """
 MATCH (e:Entity {user_id: $user_id})
+WHERE coalesce(e.is_active, true) = true
+  AND coalesce(e.is_invalidated, false) = false
 WITH e ORDER BY e.created_at ASC
 WITH toLower(trim(e.name)) AS key, e.type AS type,
      collect(e.id) AS ids,
@@ -858,6 +860,11 @@ RETURN n.id AS id, kind AS kind,
          ELSE n.content
        END AS name,
        n.type AS type, n.description AS description, n.community_id AS community_id,
+       n.source AS source, n.source_message_id AS source_message_id,
+       n.dialog_at AS dialog_at, n.created_at AS created_at,
+       n.sequence AS sequence, n.speaker AS speaker,
+       n.stmt_type AS stmt_type, n.temporal_type AS temporal_type,
+       n.valid_at AS valid_at, n.invalid_at AS invalid_at,
        coalesce(n.importance, 0.5) AS importance,
        coalesce(n.memory_layer, 'short_term') AS memory_layer,
        coalesce(n.access_count, 0) AS access_count,
