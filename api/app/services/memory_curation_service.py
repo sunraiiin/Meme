@@ -4,6 +4,7 @@ from __future__ import annotations
 import hashlib
 import hmac
 import json
+import math
 import uuid
 from datetime import datetime, timedelta, timezone
 from typing import Any
@@ -12,11 +13,15 @@ from app.config import settings
 from app.core.exceptions import BizError
 from app.core.memory.curation.models import CurationOperation, CurationPlan
 from app.core.memory.curation.planner import build_curation_plan
+from app.core.memory.curation.semantic_planner import build_semantic_curation_plan
 from app.core.memory.extraction.identity import self_identity_key
+from app.core.logging import get_logger
+from app.core.llm.resolver import get_optional_client_for_type
 from app.repositories.memory_curation_repository import MemoryCurationRepository
 from app.repositories.neo4j.memory_graph_repository import MemoryGraphRepository
 
 _PLAN_TTL = timedelta(minutes=10)
+logger = get_logger(__name__)
 
 
 def _snapshot(entity: dict[str, Any] | None) -> dict[str, Any] | None:
@@ -72,8 +77,43 @@ def _same_snapshot(planned: dict[str, Any] | None, current: dict[str, Any] | Non
     )
 
 
+def _candidate_labels(candidates: list[dict[str, Any]]) -> str:
+    """生成不暴露内部 ID 的同名候选摘要。"""
+    labels: list[str] = []
+    for entity in candidates[:4]:
+        name = str(entity.get("name") or "未命名")
+        type_ = str(entity.get("type") or "未分类")
+        description = str(entity.get("description") or "").strip()
+        detail = f"{type_}：{description[:50]}" if description else type_
+        labels.append(f"「{name}」（{detail}）")
+    if len(candidates) > 4:
+        labels.append(f"另有 {len(candidates) - 4} 个候选")
+    return "、".join(labels)
+
+
+def _canonicalize_numbers(value: Any) -> Any:
+    """消除 JSON 在 Python 与浏览器之间的等值数值表示差异。
+
+    JavaScript 会把 JSON 中的 ``1.0`` 回传为 ``1``。二者业务含义相同，
+    但直接按 JSON 字节签名会产生不同 HMAC。整数值浮点数和负零在签名前
+    统一成整数，其余有限浮点数保持数值语义。
+    """
+    if isinstance(value, dict):
+        return {str(key): _canonicalize_numbers(item) for key, item in value.items()}
+    if isinstance(value, (list, tuple)):
+        return [_canonicalize_numbers(item) for item in value]
+    if isinstance(value, float):
+        if not math.isfinite(value):
+            raise ValueError("整理计划不能包含非有限数值")
+        if value == 0 or value.is_integer():
+            return int(value)
+    return value
+
+
 def _canonical_plan(plan: CurationPlan) -> str:
-    payload = plan.model_dump(mode="json", exclude={"confirmation_token"})
+    payload = _canonicalize_numbers(
+        plan.model_dump(mode="json", exclude={"confirmation_token"})
+    )
     return json.dumps(payload, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
 
 
@@ -118,9 +158,26 @@ class MemoryCurationService:
         self.repo = repo or MemoryGraphRepository()
         self.session = session
 
+    async def _find_entities_by_name(
+        self, user_id: str, name: str
+    ) -> list[dict[str, Any]]:
+        """优先返回全部名称/别名候选；兼容只实现旧接口的测试仓储。"""
+        finder = getattr(self.repo, "find_entities_by_name", None)
+        if callable(finder):
+            return await finder(user_id, name)
+        target = await self.repo.get_entity_by_name(user_id, name)
+        return [target] if target else []
+
     async def plan(self, user_id: uuid.UUID, request: str) -> dict[str, Any]:
         """读取目标快照并签发短期确认令牌；此方法本身不写数据。"""
         plan = build_curation_plan(request)
+        if plan.status == "rejected" and self.session is not None:
+            try:
+                client = await get_optional_client_for_type(self.session, user_id, "chat")
+                if client is not None:
+                    plan = await build_semantic_curation_plan(client, request)
+            except Exception as exc:  # noqa: BLE001
+                logger.warning("记忆管家语义规划失败，保留规则拒绝结果: %s", exc)
         if plan.status == "rejected" or not plan.operations:
             return plan.model_dump(mode="json")
 
@@ -152,11 +209,20 @@ class MemoryCurationService:
                     operation.target_status = "will_create"
                 continue
 
-            target = await self.repo.get_entity_by_name(uid, operation.target_name or "")
-            if target:
+            targets = await self._find_entities_by_name(
+                uid, operation.target_name or ""
+            )
+            target = targets[0] if len(targets) == 1 else None
+            if target is not None:
                 operation.target_id = target.get("id")
                 operation.target_snapshot = _snapshot(target)
                 operation.target_status = "resolved"
+            elif targets:
+                operation.target_status = "ambiguous"
+                plan.blocking_reasons.append(
+                    f"目标名称「{operation.target_name or ''}」匹配到多个实体："
+                    f"{_candidate_labels(targets)}。请换用更明确的名称。"
+                )
             else:
                 operation.target_status = "not_found"
                 plan.blocking_reasons.append(
@@ -164,16 +230,36 @@ class MemoryCurationService:
                 )
 
             if operation.kind == "merge_entities":
-                secondary = await self.repo.get_entity_by_name(
+                secondary_targets = await self._find_entities_by_name(
                     uid, operation.secondary_target_name or ""
                 )
-                if secondary:
+                secondary = (
+                    secondary_targets[0] if len(secondary_targets) == 1 else None
+                )
+                if secondary is not None:
                     operation.secondary_target_id = secondary.get("id")
                     operation.secondary_target_snapshot = _snapshot(secondary)
+                elif secondary_targets:
+                    operation.target_status = "ambiguous"
+                    plan.blocking_reasons.append(
+                        f"第二个目标名称「{operation.secondary_target_name or ''}」"
+                        f"匹配到多个实体：{_candidate_labels(secondary_targets)}。"
+                        "请换用更明确的名称。"
+                    )
                 else:
-                    operation.target_status = "not_found"
+                    if operation.target_status != "ambiguous":
+                        operation.target_status = "not_found"
                     plan.blocking_reasons.append(
                         f"未找到第二个目标实体「{operation.secondary_target_name or ''}」。"
+                    )
+                if (
+                    target is not None
+                    and secondary is not None
+                    and target.get("id") == secondary.get("id")
+                ):
+                    operation.target_status = "ambiguous"
+                    plan.blocking_reasons.append(
+                        "两个名称实际指向同一个实体，不能执行自合并。"
                     )
 
         if plan.blocking_reasons:

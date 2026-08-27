@@ -3,11 +3,14 @@ import uuid
 import copy
 from datetime import datetime, timezone
 from types import SimpleNamespace
-from unittest.mock import patch
+from unittest.mock import AsyncMock, patch
 
+from app.core.memory.curation.models import CurationOperation, CurationPlan
+from app.core.memory.curation.semantic_planner import build_semantic_curation_plan
 from app.core.memory.curation.planner import build_curation_plan
 from app.core.exceptions import BizError
 from app.services.memory_curation_service import MemoryCurationService
+from app.services.memory_curation_service import _confirmation_token
 
 
 class MemoryCurationPlannerTests(unittest.TestCase):
@@ -26,6 +29,14 @@ class MemoryCurationPlannerTests(unittest.TestCase):
         self.assertEqual(plan.operations[0].kind, "add_self_alias")
         self.assertEqual(plan.operations[0].patch["alias"], "小夕")
         self.assertFalse(plan.requires_confirmation)
+
+    def test_natural_alias_request_is_handled_without_semantic_fallback(self):
+        plan = build_curation_plan("请把小舟作为我的另一个称呼")
+
+        self.assertEqual(plan.status, "ready")
+        self.assertEqual(plan.planner_source, "rules")
+        self.assertEqual(plan.operations[0].kind, "add_self_alias")
+        self.assertEqual(plan.operations[0].patch, {"alias": "小舟"})
 
     def test_merge_is_high_risk(self):
         plan = build_curation_plan("合并 林夕 和 林舟")
@@ -46,9 +57,159 @@ class MemoryCurationPlannerTests(unittest.TestCase):
 
         self.assertEqual(plan.status, "rejected")
         self.assertIn("暂不支持", plan.message)
+        self.assertFalse(plan.executable)
+
+
+class MemoryCurationSemanticPlannerTests(unittest.IsolatedAsyncioTestCase):
+    async def test_semantic_candidate_is_normalized_to_server_risk_policy(self):
+        class _Client:
+            async def chat(self, messages, temperature, max_tokens):
+                return """{
+                    "status": "ready",
+                    "message": "用户希望增加称呼",
+                    "operation": {
+                        "kind": "add_self_alias",
+                        "target_name": null,
+                        "secondary_target_name": null,
+                        "value": "小舟",
+                        "reason": "用户明确说这是另一个称呼"
+                    }
+                }"""
+
+        plan = await build_semantic_curation_plan(
+            _Client(), "请把小舟作为我的另一个称呼"
+        )
+
+        self.assertEqual(plan.status, "ready")
+        self.assertEqual(plan.planner_source, "llm")
+        self.assertEqual(plan.operations[0].kind, "add_self_alias")
+        self.assertEqual(plan.operations[0].patch, {"alias": "小舟"})
+        self.assertEqual(plan.operations[0].risk, "low")
+        self.assertFalse(plan.requires_confirmation)
+
+    async def test_semantic_candidate_cannot_smuggle_target_id(self):
+        class _Client:
+            async def chat(self, messages, temperature, max_tokens):
+                return """{
+                    "status": "ready",
+                    "message": "尝试注入实体 ID",
+                    "operation": {
+                        "kind": "invalidate_fact",
+                        "target_name": "林舟",
+                        "secondary_target_name": null,
+                        "value": null,
+                        "reason": "测试",
+                        "target_id": "other-user-entity"
+                    }
+                }"""
+
+        plan = await build_semantic_curation_plan(_Client(), "忘掉关于林舟的记忆")
+
+        self.assertEqual(plan.status, "rejected")
+        self.assertFalse(plan.executable)
+        self.assertEqual(plan.operations, [])
+
+    async def test_semantic_planner_rejects_internal_id_before_calling_model(self):
+        client = AsyncMock()
+
+        plan = await build_semantic_curation_plan(
+            client,
+            "将实体 7fed0eebdee34d7c8384f623ee3f35e3 设为本人",
+        )
+
+        self.assertEqual(plan.status, "rejected")
+        self.assertIn("实体名称", plan.message)
+        client.chat.assert_not_awaited()
 
 
 class MemoryCurationServiceTests(unittest.IsolatedAsyncioTestCase):
+    async def test_confirmation_token_survives_browser_numeric_normalization(self):
+        plan = CurationPlan(
+            request="请把小舟作为我的另一个称呼",
+            status="ready",
+            message="已理解",
+            operations=[
+                CurationOperation(
+                    kind="add_self_alias",
+                    summary="增加个人身份别名「小舟」",
+                    risk="low",
+                    requires_confirmation=False,
+                    patch={"alias": "小舟"},
+                    target_snapshot={"confidence": 1.0, "importance": 0.9},
+                    target_status="resolved",
+                )
+            ],
+        )
+        token = _confirmation_token(plan)
+
+        # JSON.parse/JSON.stringify 会把 1.0 规范成 1。
+        browser_payload = plan.model_dump(mode="json")
+        browser_payload["operations"][0]["target_snapshot"]["confidence"] = 1
+        restored = CurationPlan.model_validate(browser_payload)
+
+        self.assertEqual(_confirmation_token(restored), token)
+
+    async def test_rule_plan_does_not_call_llm(self):
+        class _Repo:
+            async def get_self_entity(self, user_id_text, identity_key):
+                return None
+
+        resolver = AsyncMock()
+        with patch(
+            "app.services.memory_curation_service.get_optional_client_for_type",
+            resolver,
+        ):
+            plan = await MemoryCurationService(
+                repo=_Repo(), session=object()
+            ).plan(uuid.uuid4(), "请把小舟作为我的另一个称呼")
+
+        self.assertEqual(plan["status"], "ready")
+        self.assertEqual(plan["planner_source"], "rules")
+        resolver.assert_not_awaited()
+
+    async def test_rejected_rule_request_can_use_semantic_fallback(self):
+        class _Repo:
+            async def get_self_entity(self, user_id_text, identity_key):
+                return {
+                    "id": "self-1",
+                    "name": "林舟",
+                    "aliases": ["用户"],
+                    "identity_key": identity_key,
+                    "is_self": True,
+                }
+
+        semantic_plan = CurationPlan(
+            request="希望记忆图谱以后用小舟这个昵称指代我",
+            status="ready",
+            message="已理解",
+            planner_source="llm",
+            operations=[
+                CurationOperation(
+                    kind="add_self_alias",
+                    summary="增加个人身份别名「小舟」",
+                    risk="low",
+                    requires_confirmation=False,
+                    patch={"alias": "小舟"},
+                )
+            ],
+        )
+        with (
+            patch(
+                "app.services.memory_curation_service.get_optional_client_for_type",
+                AsyncMock(return_value=object()),
+            ),
+            patch(
+                "app.services.memory_curation_service.build_semantic_curation_plan",
+                AsyncMock(return_value=semantic_plan),
+            ),
+        ):
+            plan = await MemoryCurationService(
+                repo=_Repo(), session=object()
+            ).plan(uuid.uuid4(), semantic_plan.request)
+
+        self.assertEqual(plan["planner_source"], "llm")
+        self.assertEqual(plan["operations"][0]["target_id"], "self-1")
+        self.assertTrue(plan["confirmation_token"])
     async def test_plan_enriches_targets_without_mutating_repository(self):
         user_id = uuid.uuid4()
 
@@ -103,6 +264,34 @@ class MemoryCurationServiceTests(unittest.IsolatedAsyncioTestCase):
 
         self.assertFalse(plan["executable"])
         self.assertTrue(any("不存在" in item for item in plan["blocking_reasons"]))
+
+    async def test_same_name_candidates_are_blocked_without_exposing_ids(self):
+        class _Repo:
+            async def find_entities_by_name(self, user_id_text, name):
+                return [
+                    {
+                        "id": "entity-sensitive-1",
+                        "name": name,
+                        "type": "生命体",
+                        "description": "用户本人",
+                    },
+                    {
+                        "id": "entity-sensitive-2",
+                        "name": name,
+                        "type": "角色职业",
+                        "description": "简历中的示例角色",
+                    },
+                ]
+
+        plan = await MemoryCurationService(_Repo()).plan(
+            uuid.uuid4(), "把林舟的名字改成林夕"
+        )
+
+        self.assertFalse(plan["executable"])
+        self.assertEqual(plan["operations"][0]["target_status"], "ambiguous")
+        reason = "；".join(plan["blocking_reasons"])
+        self.assertIn("匹配到多个实体", reason)
+        self.assertNotIn("entity-sensitive", reason)
 
     async def test_execute_requires_confirmation_and_can_be_undone(self):
         user_id = uuid.uuid4()

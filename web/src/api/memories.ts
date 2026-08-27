@@ -173,6 +173,74 @@ export interface Insight {
   updated_at: string | null
 }
 
+export type CurationRisk = 'low' | 'medium' | 'high'
+export type CurationPlanStatus = 'ready' | 'rejected'
+export type CurationPlannerSource = 'rules' | 'llm'
+
+export interface CurationOperation {
+  operation_id: string
+  kind:
+    | 'set_self_display_name'
+    | 'add_self_alias'
+    | 'remove_self_alias'
+    | 'correct_entity'
+    | 'merge_entities'
+    | 'invalidate_fact'
+    | 'forget_source'
+  summary: string
+  risk: CurationRisk
+  requires_confirmation: boolean
+  target_name: string | null
+  target_id: string | null
+  target_snapshot: Record<string, unknown> | null
+  secondary_target_name: string | null
+  secondary_target_id: string | null
+  secondary_target_snapshot: Record<string, unknown> | null
+  patch: Record<string, unknown>
+  reason: string | null
+  target_status: 'not_needed' | 'resolved' | 'will_create' | 'not_found' | 'ambiguous'
+}
+
+export interface CurationPlan {
+  plan_id: string
+  request: string
+  status: CurationPlanStatus
+  message: string
+  planner_source: CurationPlannerSource
+  operations: CurationOperation[]
+  risk: CurationRisk
+  requires_confirmation: boolean
+  executable: boolean
+  blocking_reasons: string[]
+  side_effects: 'none'
+  expires_at: string | null
+  confirmation_token: string | null
+}
+
+export interface CurationAuditRecord {
+  id: string
+  plan_id: string
+  operation_id: string
+  request: string
+  operation_kind: CurationOperation['kind']
+  risk: CurationRisk
+  requires_confirmation: boolean
+  status: 'confirmed' | 'executed' | 'failed' | 'undone'
+  before: Record<string, unknown> | null
+  after: Record<string, unknown> | null
+  error: string | null
+  confirmed_at: string | null
+  executed_at: string | null
+  undone_at: string | null
+  created_at: string
+}
+
+export interface CurationExecuteResult {
+  plan_id: string
+  status: 'executed'
+  operations: CurationAuditRecord[]
+}
+
 export const memoryApi = {
   remember(text: string) {
     return client.post<unknown, Wrapped<MemoryItem>>('/memories/remember', { text })
@@ -234,6 +302,31 @@ export const memoryApi = {
       query,
       top_k: topK,
     })
+  },
+  curationPlan(request: string) {
+    return client.post<unknown, Wrapped<CurationPlan>>('/memories/curation/plan', {
+      request,
+    })
+  },
+  curationExecute(plan: CurationPlan, confirmed: boolean) {
+    return client.post<unknown, Wrapped<CurationExecuteResult>>(
+      '/memories/curation/execute',
+      {
+        plan,
+        confirmation_token: plan.confirmation_token,
+        confirmed,
+      },
+    )
+  },
+  curationAudit(limit = 30) {
+    return client.get<unknown, Wrapped<CurationAuditRecord[]>>(
+      `/memories/curation/audit?limit=${limit}`,
+    )
+  },
+  curationUndo(operationId: string) {
+    return client.post<unknown, Wrapped<CurationAuditRecord>>(
+      `/memories/curation/undo/${operationId}`,
+    )
   },
   // ── V0.0.5 ⑤ 记忆审查与人类反馈闭环 ──
   reviewOverview(days = 30) {

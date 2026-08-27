@@ -20,7 +20,32 @@ def _clean_name(value: str) -> str:
 
 
 def _rejected(request: str, message: str) -> CurationPlan:
-    return CurationPlan(request=request, status="rejected", message=message)
+    return CurationPlan(
+        request=request,
+        status="rejected",
+        message=message,
+        executable=False,
+    )
+
+
+def _add_self_alias_plan(request: str, alias: str) -> CurationPlan:
+    """为确定性识别出的本人别名请求生成统一计划。"""
+    return CurationPlan(
+        request=request,
+        status="ready",
+        message=f"为个人身份增加别名「{alias}」，无需修改其他记忆。",
+        risk="low",
+        operations=[
+            CurationOperation(
+                kind="add_self_alias",
+                summary=f"增加个人身份别名「{alias}」",
+                risk="low",
+                requires_confirmation=False,
+                patch={"alias": alias},
+                target_status="will_create",
+            )
+        ],
+    )
 
 
 def _self_name_operation(request: str) -> CurationPlan | None:
@@ -104,29 +129,23 @@ def build_curation_plan(request: str) -> CurationPlan:
     if self_plan is not None:
         return self_plan
 
+    # “把小舟作为我的另一个称呼”表达的是新增别名，不应依赖模型自由解析。
+    match = re.fullmatch(
+        rf"\s*(?:请)?把\s*({_NAME})\s*(?:作为|设为|当作)\s*"
+        rf"(?:我|本人)的(?:另一个|其他)?(?:称呼|别名)\s*[。.!！]?\s*",
+        request,
+        flags=re.IGNORECASE,
+    )
+    if match:
+        return _add_self_alias_plan(request, _clean_name(match.group(1)))
+
     match = re.fullmatch(
         rf"\s*(?:给我|为我)?(?:增加|添加|新增)别名\s*({_NAME})\s*[。.!！]?\s*",
         request,
         flags=re.IGNORECASE,
     )
     if match:
-        alias = _clean_name(match.group(1))
-        return CurationPlan(
-            request=request,
-            status="ready",
-            message=f"为个人身份增加别名「{alias}」，无需修改其他记忆。",
-            risk="low",
-            operations=[
-                CurationOperation(
-                    kind="add_self_alias",
-                    summary=f"增加个人身份别名「{alias}」",
-                    risk="low",
-                    requires_confirmation=False,
-                    patch={"alias": alias},
-                    target_status="will_create",
-                )
-            ],
-        )
+        return _add_self_alias_plan(request, _clean_name(match.group(1)))
 
     match = re.fullmatch(
         rf"\s*(?:删除|移除)别名\s*({_NAME})\s*[。.!！]?\s*", request, flags=re.IGNORECASE

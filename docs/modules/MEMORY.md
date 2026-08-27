@@ -161,11 +161,15 @@ Insight → DerivedFrom → Entity
 
 ### 7.2 如何防止模型直接改坏图谱
 
-当前 Memory Curator 是受控规则型 Planner，不是可以自由执行 Cypher 的开放式 Agent。它只识别白名单操作，例如修改本人展示名、增加或移除别名、修正实体、合并实体和使事实失效。
+当前 Memory Curator 是受控 Planner，不是可以自由执行 Cypher 的开放式 Agent。它采用两级解析：固定且高置信的表达优先由规则直接生成计划；规则无法识别时，才调用用户默认对话模型生成单个语义候选。模型只能提出修改本人展示名、增加或移除别名、修正实体、合并实体和停止召回实体等白名单操作。
+
+LLM 返回的候选不是可执行计划。后端会再次使用严格 Schema 校验，并重新生成操作摘要、风险、确认策略和操作 ID；模型不能提供实体 ID、用户 ID、快照、确认令牌或数据库语句。随后系统只在当前用户的图谱中解析目标，前端“记忆管家”展示解析来源、目标状态、风险和影响，用户确认后才进入执行阶段。
 
 治理流程包含以下保护：
 
 - `plan` 阶段只读取目标并生成预览，不写数据。
+- 规则命中时不调用模型；语义兜底一次只允许生成一个操作，歧义或复合请求直接拒绝。
+- LLM 候选必须通过白名单 Schema，风险和确认策略只由服务端确定。
 - 操作按低、中、高风险分级，高风险必须明确确认。
 - 计划包含目标快照、十分钟有效期和签名确认令牌，防止被篡改或使用过期计划。
 - 执行前重新比较实体快照，目标发生变化时要求重新规划。
@@ -203,7 +207,7 @@ LLM 擅长从非结构化文本提取候选，但不适合直接承担权限、�
 - 对话自动萃取目前写入用户文本和 `auto` 来源，但没有稳定填充精确的 `source_message_id`，因此能够追溯到来源文本和图谱陈述，不一定能直接跳回某一条聊天消息。
 - PostgreSQL 和 Neo4j 之间是最终一致性，没有完整的 Outbox、自动对账和跨存储幂等恢复。
 - 温热缓存是进程内缓存，多实例部署时需要 Redis 缓存和版本失效机制。
-- 规则型记忆整理只支持有限表达，还不是完整的自然语言记忆管家。
+- 自然语言记忆管家当前一次只处理一个身份或实体整理操作；还不支持自然语言修改具体关系、批量治理或物理删除来源。
 - 实体合并会保留审计信息，但当前不能自动撤销。
 - 当前测试重点覆盖身份、治理、可靠性排序和图谱规则，还缺少稳定的线上质量指标和大规模检索评测结果。
 
@@ -279,7 +283,7 @@ LLM 擅长从非结构化文本提取候选，但不适合直接承担权限、�
 | 实体去重 | [dedup.py](../../api/app/core/memory/extraction/dedup.py) |
 | 图数据模型 | [graph_models.py](../../api/app/core/memory/graph_models.py) |
 | 混合检索与主动召回 | [retrieval](../../api/app/core/memory/retrieval/) |
-| 治理计划与执行 | [curation](../../api/app/core/memory/curation/)、[memory_curation_service.py](../../api/app/services/memory_curation_service.py) |
+| 治理计划与执行 | [curation](../../api/app/core/memory/curation/)、[memory_curation_service.py](../../api/app/services/memory_curation_service.py)、[MemoryCuratorPanel.tsx](../../web/src/components/memory/MemoryCuratorPanel.tsx) |
 | 图谱校验 | [validation](../../api/app/core/memory/validation/) |
 | 身份与写入回归 | [test_memory_identity_resolver.py](../../api/tests/test_memory_identity_resolver.py)、[test_memory_extraction_orchestrator.py](../../api/tests/test_memory_extraction_orchestrator.py) |
 | 召回可靠性回归 | [test_memory_reliability.py](../../api/tests/test_memory_reliability.py)、[test_active_recall_prompt.py](../../api/tests/test_active_recall_prompt.py) |

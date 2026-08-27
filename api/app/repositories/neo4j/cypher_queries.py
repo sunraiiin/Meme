@@ -205,6 +205,21 @@ ORDER BY CASE WHEN coalesce(e.is_self, false) = true THEN 0
 LIMIT 1
 """
 
+ENTITY_FIND_BY_NAME = """
+MATCH (e:Entity {user_id: $user_id})
+WHERE (e.name = $name OR $name IN coalesce(e.aliases, []))
+  AND coalesce(e.is_active, true) = true
+  AND coalesce(e.is_invalidated, false) = false
+RETURN e.id AS id, e.name AS name, e.type AS type,
+       e.description AS description, e.aliases AS aliases,
+       e.identity_key AS identity_key, coalesce(e.is_self, false) AS is_self,
+       CASE WHEN e.name = $name THEN 'name' ELSE 'alias' END AS matched_by
+ORDER BY CASE WHEN e.name = $name THEN 0 ELSE 1 END,
+         CASE WHEN coalesce(e.is_self, false) = true THEN 0 ELSE 1 END,
+         e.name
+LIMIT $limit
+"""
+
 # ── 检索：实体向量召回（向量索引 KNN） ──
 
 ENTITY_VECTOR_SEARCH = """

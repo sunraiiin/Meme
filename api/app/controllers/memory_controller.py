@@ -50,9 +50,10 @@ async def search_memory(
 async def plan_memory_curation(
     body: MemoryCurationPlanRequest,
     user: User = Depends(get_current_user),
+    session: AsyncSession = Depends(get_session),
 ):
     """把自然语言整理请求转成只读、可审阅的结构化计划。"""
-    plan = await MemoryCurationService().plan(user.id, body.request)
+    plan = await MemoryCurationService(session=session).plan(user.id, body.request)
     return success(plan)
 
 

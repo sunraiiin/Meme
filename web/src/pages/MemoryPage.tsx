@@ -25,6 +25,7 @@ import {
   ExclamationCircleOutlined,
   PlusOutlined,
   ReloadOutlined,
+  RobotOutlined,
   SearchOutlined,
   ThunderboltOutlined,
 } from '@ant-design/icons'
@@ -38,6 +39,7 @@ import {
   type TimelineEvent,
 } from '@/api/memories'
 import ReviewPanel from '@/components/memory/ReviewPanel'
+import MemoryCuratorPanel from '@/components/memory/MemoryCuratorPanel'
 
 const { Text, Paragraph } = Typography
 
@@ -86,7 +88,7 @@ function TrustTag({ confidence }: { confidence?: number | null }) {
 
 export default function MemoryPage() {
   const [mode, setMode] = useState<
-    'profile' | 'community' | 'timeline' | 'search' | 'review'
+    'profile' | 'curator' | 'community' | 'timeline' | 'search' | 'review'
   >('profile')
 
   // 手机端用短标签,否则 5 个 4 字标签在窄屏会被挤成省略号
@@ -102,6 +104,7 @@ export default function MemoryPage() {
 
   const tabOptions = [
     { label: isMobile ? '画像' : '我的画像', value: 'profile', icon: <BulbOutlined /> },
+    { label: isMobile ? '管家' : '记忆管家', value: 'curator', icon: <RobotOutlined /> },
     { label: isMobile ? '社区' : '主题社区', value: 'community', icon: <ClusterOutlined /> },
     { label: isMobile ? '时间' : '时间线', value: 'timeline', icon: <ClockCircleOutlined /> },
     { label: isMobile ? '检索' : '记忆检索', value: 'search', icon: <SearchOutlined /> },
@@ -118,7 +121,7 @@ export default function MemoryPage() {
             className="memory-tabs"
             value={mode}
             onChange={(v) =>
-              setMode(v as 'profile' | 'community' | 'timeline' | 'search' | 'review')
+              setMode(v as 'profile' | 'curator' | 'community' | 'timeline' | 'search' | 'review')
             }
             options={tabOptions}
           />
@@ -126,14 +129,18 @@ export default function MemoryPage() {
       >
         {mode === 'profile' ? (
           <ProfilePanel />
+        ) : mode === 'curator' ? (
+          <MemoryCuratorPanel />
         ) : mode === 'community' ? (
           <CommunityPanel />
         ) : mode === 'timeline' ? (
           <TimelinePanel />
         ) : mode === 'search' ? (
           <SearchPanel />
-        ) : (
+        ) : mode === 'review' ? (
           <ReviewPanel />
+        ) : (
+          <MemoryCuratorPanel />
         )}
       </Card>
     </div>
