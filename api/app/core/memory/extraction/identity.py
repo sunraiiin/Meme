@@ -14,6 +14,27 @@ from app.core.memory.graph_models import EntityNode
 SELF_SURFACE_NAMES = frozenset({"我", "用户", "本人", "自己", "我本人"})
 _GENERIC_SELF_NAMES = SELF_SURFACE_NAMES | {"user", "self"}
 _NAME_CHARS = r"[A-Za-z\u4e00-\u9fff][A-Za-z0-9_\-·\u4e00-\u9fff]{0,31}"
+_INTERROGATIVE_NAME_RE = re.compile(
+    r"^(?:什么(?:名字|姓名|称呼)?|啥(?:名字|姓名|称呼)?|谁|"
+    r"哪个(?:名字|姓名|人)?|哪位|哪一个)(?:吗|呢|啊|呀)?$",
+    flags=re.IGNORECASE,
+)
+_SELF_IDENTITY_QUESTION_PATTERNS = (
+    re.compile(
+        r"(?:我|本人|用户)(?:叫|是)\s*(?:什么(?:名字)?|啥(?:名字)?|谁|哪个|哪位)",
+        flags=re.IGNORECASE,
+    ),
+    re.compile(
+        r"(?:我|本人|用户)(?:的)?(?:名字|姓名|称呼)\s*(?:是|叫)?\s*"
+        r"(?:什么|啥|哪个|哪位)",
+        flags=re.IGNORECASE,
+    ),
+    re.compile(
+        r"(?:记得|知道|告诉).{0,12}(?:我|本人|用户)(?:的)?"
+        r"(?:名字|姓名|称呼|叫什么|是谁)",
+        flags=re.IGNORECASE,
+    ),
+)
 
 
 @dataclass(frozen=True)
@@ -39,7 +60,14 @@ def _clean_name(value: str) -> str:
         r"[，。！？；;、,\.\n]|(?:并且|然后|但是|现在|以后|希望|想要)", value, 1
     )[0]
     value = re.sub(r"^(?:叫作|叫做|称为|是|为)\s*", "", value).strip()
+    if _is_interrogative_name(value):
+        return ""
     return value[:32]
+
+
+def _is_interrogative_name(value: str) -> bool:
+    """判断候选是否只是姓名疑问词，而不是可落库的身份名称。"""
+    return bool(_INTERROGATIVE_NAME_RE.fullmatch((value or "").strip()))
 
 
 def _names_after(pattern: str, text: str) -> list[str]:
@@ -102,6 +130,24 @@ def extract_identity_signals(text: str) -> IdentitySignals:
         alias_names=unique([*historical, *aliases]),
         invalid_names=unique(invalid),
     )
+
+
+def is_self_identity_question(text: str) -> bool:
+    """判断文本是否仅在询问用户身份，而没有提供新的姓名声明。"""
+    text = (text or "").strip()
+    if not text or extract_identity_signals(text).current_names:
+        return False
+    text = re.sub(
+        r"^(?:(?:请问|请告诉我|告诉我|麻烦告诉我)|"
+        r"(?:你|您)(?:还)?(?:知道|记得)|(?:你|您)?(?:能|可以|能否)告诉我)"
+        r"[，,:：\s]*",
+        "",
+        text,
+    )
+    clauses = [item.strip() for item in re.split(r"[，,。；;！？!?]", text) if item.strip()]
+    if len(clauses) != 1:
+        return False
+    return any(pattern.search(clauses[0]) for pattern in _SELF_IDENTITY_QUESTION_PATTERNS)
 
 
 def self_identity_key(user_id: str) -> str:
@@ -168,9 +214,14 @@ async def normalize_entity_pool(
             if candidate and candidate.get("type") == "生命体":
                 existing = candidate
                 break
-    existing_aliases = set(existing.get("aliases") or []) if existing else set()
+    existing_alias_list = list(existing.get("aliases") or []) if existing else []
+    existing_aliases = set(existing_alias_list)
     existing_name = (existing.get("name") or "") if existing else ""
-    known_names = existing_aliases | ({existing_name} if existing_name else set())
+    known_names = {
+        name for name in existing_aliases if not _is_interrogative_name(name)
+    }
+    if existing_name and not _is_interrogative_name(existing_name):
+        known_names.add(existing_name)
     known_names |= set(SELF_SURFACE_NAMES)
 
     has_self_candidate = any(
@@ -189,15 +240,32 @@ async def normalize_entity_pool(
     if not current_name or current_name.casefold() in {
         item.casefold() for item in _GENERIC_SELF_NAMES
     }:
-        current_name = existing_name or "用户"
-    if current_name.casefold() in invalid_names:
+        if existing_name and not _is_interrogative_name(existing_name):
+            current_name = existing_name
+        else:
+            recoverable_aliases = [
+                name
+                for name in existing_alias_list
+                if name
+                and name.casefold()
+                not in {item.casefold() for item in _GENERIC_SELF_NAMES}
+                and not _is_interrogative_name(name)
+            ]
+            current_name = (
+                recoverable_aliases[0] if len(recoverable_aliases) == 1 else "用户"
+            )
+    if current_name.casefold() in invalid_names or _is_interrogative_name(current_name):
         current_name = "用户"
 
     aliases = set(existing_aliases)
     aliases.update(SELF_SURFACE_NAMES)
     aliases.update(signals.alias_names)
     aliases.update(signals.current_names[:-1])
-    if existing_name and existing_name.casefold() != current_name.casefold():
+    if (
+        existing_name
+        and existing_name.casefold() != current_name.casefold()
+        and not _is_interrogative_name(existing_name)
+    ):
         aliases.add(existing_name)
     aliases = {
         name
@@ -205,6 +273,7 @@ async def normalize_entity_pool(
         if name
         and name.casefold() != current_name.casefold()
         and name.casefold() not in invalid_names
+        and not _is_interrogative_name(name)
     }
 
     self_entity = EntityNode(
@@ -241,6 +310,7 @@ async def normalize_entity_pool(
 __all__ = [
     "IdentitySignals",
     "extract_identity_signals",
+    "is_self_identity_question",
     "normalize_entity_pool",
     "self_identity_key",
     "should_resolve_to_self",
