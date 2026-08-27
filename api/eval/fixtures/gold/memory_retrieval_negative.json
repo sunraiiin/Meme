@@ -1,0 +1,10 @@
+[
+  {"question": "用户的生日是哪一天？", "category": "missing_profile"},
+  {"question": "用户是否已经结婚？", "category": "missing_relationship"},
+  {"question": "用户开什么品牌的汽车？", "category": "missing_possession"},
+  {"question": "用户最喜欢哪一部电影？", "category": "missing_preference"},
+  {"question": "用户有几个孩子？", "category": "missing_relationship"},
+  {"question": "用户所在公司的名称是什么？", "category": "missing_profile"},
+  {"question": "用户会不会游泳？", "category": "missing_ability"},
+  {"question": "用户是不是医生？", "category": "contradictory_profile"}
+]

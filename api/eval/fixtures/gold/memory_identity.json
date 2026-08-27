@@ -3,6 +3,7 @@
     "id": "self-name",
     "text": "我叫林夕。",
     "scenario": "self_name",
+    "candidate_entities": ["我", "林夕"],
     "expected_target": "self",
     "expected_display_name": "林夕",
     "expected_aliases": ["我", "用户"]
@@ -11,12 +12,14 @@
     "id": "explicit-self-link",
     "text": "林夕就是我。",
     "scenario": "explicit_self_link",
+    "candidate_entities": ["林夕"],
     "expected_target": "self"
   },
   {
     "id": "self-fact",
     "text": "我最近在学习 Python。",
     "scenario": "self_fact",
+    "candidate_entities": ["我", "Python"],
     "expected_target": "self",
     "expected_relation": ["self", "了解", "Python"]
   },
@@ -24,6 +27,7 @@
     "id": "self-alias",
     "text": "大家平时叫我小夕。",
     "scenario": "self_alias",
+    "candidate_entities": ["我", "小夕"],
     "expected_target": "self",
     "expected_alias": "小夕"
   },
@@ -31,6 +35,7 @@
     "id": "roleplay-name",
     "text": "小说中的林夕是一名侦探。",
     "scenario": "roleplay_or_quoted_name",
+    "candidate_entities": ["林夕", "侦探"],
     "expected_target": "new_entity_or_review",
     "must_not_auto_link_self": true
   },
@@ -38,6 +43,7 @@
     "id": "colleague-same-name",
     "text": "我的同事林夕负责测试。",
     "scenario": "third_person_same_name",
+    "candidate_entities": ["林夕", "测试"],
     "expected_target": "new_entity_or_review",
     "must_not_auto_link_self": true
   },
@@ -45,6 +51,7 @@
     "id": "rename",
     "text": "我以前叫林夕，现在希望叫林舟。",
     "scenario": "name_change",
+    "candidate_entities": ["我", "林夕", "林舟"],
     "expected_target": "self",
     "expected_display_name": "林舟",
     "expected_historical_alias": "林夕"
@@ -53,6 +60,7 @@
     "id": "negation",
     "text": "我不叫林夕，刚才说错了。",
     "scenario": "negated_identity",
+    "candidate_entities": ["我", "林夕"],
     "expected_target": "self",
     "must_not_add_active_alias": "林夕"
   },
@@ -60,6 +68,7 @@
     "id": "duplicate-input",
     "text": "我叫林夕。",
     "scenario": "idempotent_replay",
+    "candidate_entities": ["我", "林夕"],
     "expected_target": "self",
     "must_not_create_second_self": true
   }

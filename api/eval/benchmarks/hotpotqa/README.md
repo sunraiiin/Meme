@@ -33,16 +33,19 @@ uv run python -m eval.run_eval --benchmark hotpotqa --sample 50
 # Verifier 对照(等 ② Verifier Loop 完成后启用)
 uv run python -m eval.run_eval --benchmark hotpotqa --verifier same   # 同模型 self-critique
 uv run python -m eval.run_eval --benchmark hotpotqa --verifier cross  # 跨 family Verifier
+uv run python -m eval.run_eval --benchmark hotpotqa --verifier compare # 同一答案做公平 A/B
 ```
 
 ## 输出
 
-- `report-hotpotqa-{ts}.md`:指标表(EM / F1 / Retrieval Recall@k / 样本数)
+- `report-hotpotqa-{ts}.md`:指标表(EM / F1 / Retrieval Recall@k / 95% CI / 样本数)
 - `details-hotpotqa-{ts}.json`:逐题明细(检索 top-k titles / pred / EM / F1)
 
 ## 污染声明(诚实)
 
 HotpotQA dev 集发布于 2018 年,主流 LLM 训练集大概率已覆盖。本评测**仅用于系统设计对比**(不同检索配置、不同 Verifier 配置间的相对差异),**不作系统的绝对水平断言**。
+
+`compare` 会先生成一次答案，再把完全相同的答案交给同模型和跨家族 Verifier，避免两次生成结果不同污染 A/B；报告同时给出漏检率、误拒率及与 EM 的一致率。EM 仍只是严格字符串口径，Verifier 结论需要结合逐题明细解释。
 
 ## 简历话术(待填真实数字)
 

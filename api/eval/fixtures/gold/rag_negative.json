@@ -1,0 +1,10 @@
+[
+  {"question": "量子纠缠实验最近取得了什么突破？", "category": "out_of_corpus"},
+  {"question": "Python 3.15 新增了哪些语法？", "category": "out_of_corpus"},
+  {"question": "北京今天的天气和空气质量怎么样？", "category": "realtime"},
+  {"question": "如何诊断 Kubernetes Pod 的 CrashLoopBackOff？", "category": "out_of_corpus"},
+  {"question": "2026 年世界杯冠军是谁？", "category": "future_or_unknown"},
+  {"question": "红楼梦中贾宝玉最后去了哪里？", "category": "out_of_corpus"},
+  {"question": "公司今年第三季度的营收是多少？", "category": "private_unknown"},
+  {"question": "请解释 CAP 定理中的网络分区。", "category": "out_of_corpus"}
+]

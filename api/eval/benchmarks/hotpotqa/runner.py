@@ -25,6 +25,7 @@ from eval import metrics as M
 from eval.benchmarks._common import write_benchmark_details, write_benchmark_report
 from eval.benchmarks.hotpotqa.loader import load
 from eval.benchmarks.hotpotqa.qa_verifier import judge_qa
+from eval.stats import bootstrap_mean_ci
 
 K_RETRIEVE = 4  # 每题检索 top-4 段落给 chat 答（distractor 共 10 段，2 段是 gold）
 
@@ -193,25 +194,27 @@ async def run_benchmark(
     verifier: str = "none",
     seed: int = 42,
     verifier_client_factory=None,
+    run_manifest: dict | None = None,
 ) -> tuple[dict, list]:
     """跑 HotpotQA distractor + 可选的 Verifier A/B 实验。
 
     Args:
         embed_client / chat_client / rerank_client: 由 run_eval 注入
         sample: 采样数（按 bridge/comparison 分层）
-        verifier: none | same | cross
+        verifier: none | same | cross | compare
             - none:  仅算 EM/F1 + 检索 Recall(baseline)
             - same:  答完后用 chat_client 同款做 LLM-as-judge,判 verifier_pass=1/0
             - cross: 答完后用单独配置的 verifier 模型判;未配置降级到 same
+            - compare: 同一份回答同时交给 same/cross,避免重复生成造成 A/B 混杂
         seed: 采样种子
         verifier_client_factory: 可调用 → 返回 cross 模式用的 LLMClient(由 run_eval 注入,
                                   这样 runner 不直接耦合 eval_config 模块)
     """
-    # 准备 verifier client(仅 same/cross 用到)
-    judge_client = None
+    # 同一份 pred 可以交给多个 judge，保证 same/cross 比较只改变审稿模型。
+    judge_clients: dict[str, Any] = {}
     judge_kind_actual = "none"
     if verifier == "same":
-        judge_client = chat_client
+        judge_clients["same"] = chat_client
         judge_kind_actual = "same"
     elif verifier == "cross":
         if verifier_client_factory is not None:
@@ -220,11 +223,20 @@ async def run_benchmark(
             cross_client = None
         if cross_client is None:
             print("[hotpotqa] --verifier=cross 但未配置 EVAL_VERIFIER_*,降级到 same")
-            judge_client = chat_client
+            judge_clients["same"] = chat_client
             judge_kind_actual = "same(降级自 cross)"
         else:
-            judge_client = cross_client
+            judge_clients["cross"] = cross_client
             judge_kind_actual = f"cross ({cross_client.model_name})"
+    elif verifier == "compare":
+        cross_client = verifier_client_factory() if verifier_client_factory else None
+        judge_clients["same"] = chat_client
+        if cross_client is not None:
+            judge_clients["cross"] = cross_client
+            judge_kind_actual = f"same + cross ({cross_client.model_name})"
+        else:
+            judge_kind_actual = "same only(cross 未配置)"
+            print("[hotpotqa] compare 未配置跨家族 Verifier,仅运行 same")
 
     print(f"[hotpotqa] 加载数据集（采样 {sample} 条）… verifier={verifier} (实际: {judge_kind_actual})")
     queries = load(n=sample, seed=seed)
@@ -236,7 +248,9 @@ async def run_benchmark(
     em_list: list[float] = []
     f1_list: list[float] = []
     retr_recall_list: list[float] = []  # 检索 top-k 段落对 gold_titles 的覆盖
-    verifier_pass_list: list[int] = []  # verifier 判过=1 / 判不过=0(仅 same/cross 收集)
+    verifier_passes: dict[str, list[int]] = {
+        kind: [] for kind in judge_clients
+    }
     details: list[dict] = []
 
     total = len(queries)
@@ -273,18 +287,21 @@ async def run_benchmark(
             mark = "✓" if em else ("~" if f1 > 0 else "✗")
             print(f"    {mark} pred='{pred[:60]}' | gold='{q['answer'][:60]}' | EM={em:.0f} F1={f1:.2f}")
             # 6. (可选) Verifier 判合格:same/cross 模式
-            verifier_pass = None
-            if judge_client is not None:
+            item_verifier_passes: dict[str, int] = {}
+            for kind, judge_client in judge_clients.items():
                 verifier_pass = await judge_qa(
                     judge_client,
                     question=q["question"],
                     pred=pred,
                     retrieved_passages=retrieved,
                 )
-                verifier_pass_list.append(verifier_pass)
+                verifier_passes[kind].append(verifier_pass)
+                item_verifier_passes[kind] = verifier_pass
                 # 漏检 = verifier 判过但实际错(em=0)
                 leak = int(verifier_pass == 1 and em == 0)
-                print(f"    [verifier] pass={verifier_pass} leak={leak}")
+                print(
+                    f"    [verifier:{kind}] pass={verifier_pass} leak={leak}"
+                )
             details.append({
                 "qid": qid,
                 "question": q["question"],
@@ -296,39 +313,79 @@ async def run_benchmark(
                 "pred": pred,
                 "em": em,
                 "f1": round(f1, 4),
-                "verifier_pass": verifier_pass,
+                "verifier_passes": item_verifier_passes,
             })
         finally:
             await _clear_one(qid)
 
     # 基础指标
+    em_ci = bootstrap_mean_ci(em_list, seed=seed)
+    f1_ci = bootstrap_mean_ci(f1_list, seed=seed)
+    recall_ci = bootstrap_mean_ci(retr_recall_list, seed=seed)
     base_row: dict[str, Any] = {
         "EM(严格正确率)": M.avg(em_list),
+        "EM 95%CI": f"[{em_ci[0]}, {em_ci[1]}]",
         "F1(软正确率)": M.avg(f1_list),
+        "F1 95%CI": f"[{f1_ci[0]}, {f1_ci[1]}]",
         f"Retr Recall@{K_RETRIEVE}": M.avg(retr_recall_list),
+        "Recall 95%CI": f"[{recall_ci[0]}, {recall_ci[1]}]",
         "样本数": len(em_list),
     }
-    # 若开启了 verifier(same/cross),追加 verifier 相关指标
-    if verifier_pass_list:
-        n_total = len(verifier_pass_list)
-        n_pass = sum(verifier_pass_list)
+    def _judge_metrics(pass_list: list[int]) -> dict[str, float]:
+        n_total = len(pass_list)
+        n_pass = sum(pass_list)
         # 漏检率 = (verifier 判过 ∩ 实际 EM=0) / verifier 判过总数
         leak = sum(
-            1 for vp, em in zip(verifier_pass_list, em_list) if vp == 1 and em == 0
+            1 for vp, em in zip(pass_list, em_list) if vp == 1 and em == 0
         )
         leak_rate = leak / n_pass if n_pass else 0.0
+        false_reject = sum(
+            1 for vp, em in zip(pass_list, em_list) if vp == 0 and em == 1
+        )
+        rejected = n_total - n_pass
+        false_reject_rate = false_reject / rejected if rejected else 0.0
         # verifier 与 EM 一致率 = (二者同时为 1 或同时为 0) / total
-        agree = sum(1 for vp, em in zip(verifier_pass_list, em_list) if vp == int(em))
+        agree = sum(1 for vp, em in zip(pass_list, em_list) if vp == int(em))
         agree_rate = agree / n_total if n_total else 0.0
-        base_row.update({
+        return {
             "Verifier 判过率": round(n_pass / n_total, 4) if n_total else 0.0,
             "漏检率(judge 通过但 EM=0)": round(leak_rate, 4),
+            "误拒率(judge 拒绝但 EM=1)": round(false_reject_rate, 4),
             "与 EM 一致率": round(agree_rate, 4),
-        })
+        }
+
+    if verifier_passes:
+        base_row.update(
+            {
+                "Verifier 判过率": "-",
+                "漏检率(judge 通过但 EM=0)": "-",
+                "误拒率(judge 拒绝但 EM=1)": "-",
+                "与 EM 一致率": "-",
+            }
+        )
 
     table: dict[str, dict[str, Any]] = {
-        f"verifier={verifier}": base_row,
+        "answer baseline": base_row,
     }
+    for kind, pass_list in verifier_passes.items():
+        table[f"judge={kind}"] = {**base_row, **_judge_metrics(pass_list)}
+    for qtype in sorted({row["type"] for row in details}):
+        indexes = [i for i, row in enumerate(details) if row["type"] == qtype]
+        type_em = [em_list[i] for i in indexes]
+        type_f1 = [f1_list[i] for i in indexes]
+        type_recall = [retr_recall_list[i] for i in indexes]
+        type_em_ci = bootstrap_mean_ci(type_em, seed=seed)
+        type_f1_ci = bootstrap_mean_ci(type_f1, seed=seed)
+        type_recall_ci = bootstrap_mean_ci(type_recall, seed=seed)
+        table[f"{qtype} 子集"] = {
+            "EM(严格正确率)": M.avg(type_em),
+            "EM 95%CI": f"[{type_em_ci[0]}, {type_em_ci[1]}]",
+            "F1(软正确率)": M.avg(type_f1),
+            "F1 95%CI": f"[{type_f1_ci[0]}, {type_f1_ci[1]}]",
+            f"Retr Recall@{K_RETRIEVE}": M.avg(type_recall),
+            "Recall 95%CI": f"[{type_recall_ci[0]}, {type_recall_ci[1]}]",
+            "样本数": len(indexes),
+        }
 
     meta = {
         "数据集": "hotpot_qa / distractor",
@@ -349,7 +406,7 @@ async def run_benchmark(
         "**F1(软正确率)**:token 级 precision/recall 调和平均,反映「答对了但措辞略差」(如 "
         "答 `Anomalisa (2015 film)` vs gold `Anomalisa` → F1≈0.5)。业界两个一起报。",
         "verifier 字段说明:none = 无 Verifier baseline;same = 同 chat 模型 self-critique;"
-        "cross = 跨 family verifier 模型(由 EVAL_VERIFIER_* 配置)。",
+        "cross = 跨 family verifier 模型;compare = 对同一答案同时运行二者。",
         "**漏检率**:Verifier 判过但实际 EM=0 的占比 —— 越低代表 Verifier 越可信。"
         "对比 same vs cross 的漏检率即「为什么不能 self-critique」的硬数据。",
     ]
@@ -357,8 +414,11 @@ async def run_benchmark(
         "hotpotqa", "HotpotQA distractor (L3)",
         table, meta=meta, extra_notes=notes,
         category="rag",
+        manifest=run_manifest,
     )
-    detail_path = write_benchmark_details("hotpotqa", details, category="rag")
+    detail_path = write_benchmark_details(
+        "hotpotqa", details, category="rag", manifest=run_manifest
+    )
     print(f"  报告: {report}\n  明细: {detail_path}")
     return table, details
 
