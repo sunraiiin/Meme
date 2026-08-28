@@ -59,8 +59,9 @@ async def judge_qa(
     try:
         text = await client.chat(
             [{"role": "user", "content": prompt}],
-            # 部分模型会先生成 reasoning_content；4 token 会把最终 1/0 截断。
-            max_tokens=128, temperature=0.0,
+            # 部分模型会先生成数百 token 的 reasoning_content；
+            # 过小上限会把最终 1/0 截断，造成“全部拒绝”的假结论。
+            max_tokens=1024, temperature=0.0,
         )
     except Exception as e:  # noqa: BLE001
         logger.warning("QA verifier 调用失败,降级 0(不通过): %s", e)

@@ -38,7 +38,7 @@ K_RETRIEVE = 4  # 每题检索 top-4 段落给 chat 答（distractor 共 10 段�
 _NS_HOTPOT = uuid.UUID("eee30000-0000-0000-0000-0000000000c3")
 _CHECKPOINT_DIR = Path(__file__).parents[2] / "results" / "rag" / "checkpoints"
 _MAX_EMBED_CHARS = 2000
-_CHECKPOINT_PROTOCOL_VERSION = 2
+_CHECKPOINT_PROTOCOL_VERSION = 3
 
 
 def _qid_to_uid(qid: str) -> str:
