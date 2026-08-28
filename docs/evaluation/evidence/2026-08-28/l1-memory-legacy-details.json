@@ -1,0 +1,608 @@
+{
+  "manifest": {
+    "generated_at_utc": "2026-08-27T12:41:51.187202+00:00",
+    "git_commit": "b1d6ac2ad82c69c5149c8564927e34aa3fe302a1",
+    "git_dirty": false,
+    "fixture_sha256": "b7e83ccaae73220467866fe74407ef341199ca7cb589f06ad9ab074d5970ddd2",
+    "fixture_counts": {
+      "dedup": 3,
+      "extraction": 10,
+      "memory_identity": 9,
+      "memory_retrieval": 19,
+      "memory_retrieval_negative": 8,
+      "rag_negative": 8,
+      "retrieval": 22,
+      "corpus_documents": 10,
+      "dialogues": 17
+    },
+    "model_source": "encrypted-app-config",
+    "models": {
+      "embedding": "qwen3.7-text-embedding",
+      "chat": "glm-4.6v",
+      "rerank": "(not configured)",
+      "verifier": "qwen3.8-max"
+    },
+    "parameters": {
+      "embedding_dimensions": 1024,
+      "skip_check": true,
+      "skip_setup": true,
+      "only": "memory",
+      "corpus_limit": 1000,
+      "query_limit": 100,
+      "sample": 100,
+      "verifier": "none",
+      "seed": 42
+    }
+  },
+  "results": {
+    "记忆检索": [
+      {
+        "question": "用户是做什么工作的？",
+        "gold": [
+          "产品经理",
+          "用户"
+        ],
+        "retrieved_topk": [
+          "用户",
+          "用户爸妈",
+          "林晓",
+          "索尼微单",
+          "日语"
+        ],
+        "hit": true,
+        "missed": [
+          "产品经理"
+        ],
+        "retrieved_raw_topk": [
+          "用户",
+          "用户爸妈",
+          "林晓",
+          "索尼微单",
+          "日语"
+        ]
+      },
+      {
+        "question": "用户现在住在哪个城市？",
+        "gold": [
+          "上海",
+          "用户"
+        ],
+        "retrieved_topk": [
+          "用户",
+          "用户爸妈",
+          "成都",
+          "上海",
+          "地铁"
+        ],
+        "hit": true,
+        "missed": [],
+        "retrieved_raw_topk": [
+          "用户",
+          "用户爸妈",
+          "成都",
+          "上海",
+          "地铁"
+        ]
+      },
+      {
+        "question": "用户住在上海哪个区？",
+        "gold": [
+          "徐汇区",
+          "用户"
+        ],
+        "retrieved_topk": [
+          "上海",
+          "徐汇区",
+          "用户",
+          "用户爸妈",
+          "徐汇滨江"
+        ],
+        "hit": true,
+        "missed": [],
+        "retrieved_raw_topk": [
+          "上海",
+          "上海徐汇区",
+          "用户",
+          "用户爸妈",
+          "徐汇滨江"
+        ]
+      },
+      {
+        "question": "用户养了什么宠物？",
+        "gold": [
+          "团子",
+          "用户"
+        ],
+        "retrieved_topk": [
+          "用户",
+          "用户爸妈",
+          "团子",
+          "狗",
+          "朋友"
+        ],
+        "hit": true,
+        "missed": [],
+        "retrieved_raw_topk": [
+          "用户",
+          "用户爸妈",
+          "团子",
+          "狗",
+          "朋友"
+        ]
+      },
+      {
+        "question": "用户的猫叫什么名字？",
+        "gold": [
+          "团子",
+          "用户"
+        ],
+        "retrieved_topk": [
+          "用户",
+          "用户爸妈",
+          "林晓",
+          "朋友",
+          "狗"
+        ],
+        "hit": true,
+        "missed": [
+          "团子"
+        ],
+        "retrieved_raw_topk": [
+          "用户",
+          "用户爸妈",
+          "林晓",
+          "朋友",
+          "狗"
+        ]
+      },
+      {
+        "question": "用户周末喜欢做什么？",
+        "gold": [
+          "爬山",
+          "用户"
+        ],
+        "retrieved_topk": [
+          "用户",
+          "用户爸妈",
+          "爬山",
+          "朋友",
+          "日本京都"
+        ],
+        "hit": true,
+        "missed": [],
+        "retrieved_raw_topk": [
+          "用户",
+          "用户爸妈",
+          "爬山",
+          "朋友",
+          "日本京都"
+        ]
+      },
+      {
+        "question": "用户在学什么外语？",
+        "gold": [
+          "日语",
+          "用户"
+        ],
+        "retrieved_topk": [
+          "用户",
+          "用户爸妈",
+          "日语",
+          "单词",
+          "朋友"
+        ],
+        "hit": true,
+        "missed": [],
+        "retrieved_raw_topk": [
+          "用户",
+          "用户爸妈",
+          "日语",
+          "单词",
+          "朋友"
+        ]
+      },
+      {
+        "question": "用户去哪里旅行过？",
+        "gold": [
+          "京都",
+          "用户"
+        ],
+        "retrieved_topk": [
+          "用户",
+          "用户爸妈",
+          "上海",
+          "京都",
+          "爬山"
+        ],
+        "hit": true,
+        "missed": [],
+        "retrieved_raw_topk": [
+          "用户",
+          "用户爸妈",
+          "上海",
+          "日本京都",
+          "爬山"
+        ]
+      },
+      {
+        "question": "用户用什么相机拍照？",
+        "gold": [
+          "索尼相机",
+          "用户"
+        ],
+        "retrieved_topk": [
+          "索尼相机",
+          "用户",
+          "索尼微单",
+          "用户爸妈",
+          "照片"
+        ],
+        "hit": true,
+        "missed": [],
+        "retrieved_raw_topk": [
+          "相机",
+          "用户",
+          "索尼微单",
+          "用户爸妈",
+          "照片"
+        ]
+      },
+      {
+        "question": "用户用什么牌子的手机？",
+        "gold": [
+          "iPhone",
+          "用户"
+        ],
+        "retrieved_topk": [
+          "用户",
+          "iPhone",
+          "用户爸妈",
+          "相机",
+          "Notion"
+        ],
+        "hit": true,
+        "missed": [],
+        "retrieved_raw_topk": [
+          "用户",
+          "iPhone",
+          "用户爸妈",
+          "相机",
+          "Notion"
+        ]
+      },
+      {
+        "question": "用户喜欢喝什么咖啡？",
+        "gold": [
+          "拿铁",
+          "用户"
+        ],
+        "retrieved_topk": [
+          "用户",
+          "用户爸妈",
+          "爬山",
+          "iPhone",
+          "朋友"
+        ],
+        "hit": true,
+        "missed": [
+          "拿铁"
+        ],
+        "retrieved_raw_topk": [
+          "用户",
+          "用户爸妈",
+          "爬山",
+          "iPhone",
+          "朋友"
+        ]
+      },
+      {
+        "question": "用户爱吃什么？",
+        "gold": [
+          "火锅",
+          "用户"
+        ],
+        "retrieved_topk": [
+          "用户",
+          "用户爸妈",
+          "火锅",
+          "iPhone",
+          "朋友"
+        ],
+        "hit": true,
+        "missed": [],
+        "retrieved_raw_topk": [
+          "用户",
+          "用户爸妈",
+          "火锅",
+          "iPhone",
+          "朋友"
+        ]
+      },
+      {
+        "question": "用户用什么工具记笔记？",
+        "gold": [
+          "Notion",
+          "用户"
+        ],
+        "retrieved_topk": [
+          "用户",
+          "Notion",
+          "用户爸妈",
+          "地铁",
+          "iPhone"
+        ],
+        "hit": true,
+        "missed": [],
+        "retrieved_raw_topk": [
+          "用户",
+          "Notion",
+          "用户爸妈",
+          "地铁",
+          "iPhone"
+        ]
+      },
+      {
+        "question": "用户最好的朋友是谁？",
+        "gold": [
+          "王磊",
+          "用户"
+        ],
+        "retrieved_topk": [
+          "朋友",
+          "用户",
+          "用户爸妈",
+          "日语",
+          "iPhone"
+        ],
+        "hit": true,
+        "missed": [
+          "王磊"
+        ],
+        "retrieved_raw_topk": [
+          "朋友",
+          "用户",
+          "用户爸妈",
+          "日语",
+          "iPhone"
+        ]
+      },
+      {
+        "question": "用户的妹妹是谁？",
+        "gold": [
+          "林晓",
+          "用户"
+        ],
+        "retrieved_topk": [
+          "用户爸妈",
+          "用户",
+          "林晓",
+          "朋友",
+          "地铁"
+        ],
+        "hit": true,
+        "missed": [],
+        "retrieved_raw_topk": [
+          "用户爸妈",
+          "用户",
+          "林晓",
+          "朋友",
+          "地铁"
+        ]
+      },
+      {
+        "question": "用户的妹妹住在哪里？",
+        "gold": [
+          "林晓",
+          "成都"
+        ],
+        "retrieved_topk": [
+          "用户爸妈",
+          "用户",
+          "林晓",
+          "朋友",
+          "地铁"
+        ],
+        "hit": true,
+        "missed": [
+          "成都"
+        ],
+        "retrieved_raw_topk": [
+          "用户爸妈",
+          "用户",
+          "林晓",
+          "朋友",
+          "地铁"
+        ]
+      },
+      {
+        "question": "用户在哪所大学读书？",
+        "gold": [
+          "复旦大学",
+          "用户"
+        ],
+        "retrieved_topk": [
+          "用户",
+          "用户爸妈",
+          "索尼微单",
+          "日语",
+          "上海徐汇区"
+        ],
+        "hit": true,
+        "missed": [
+          "复旦大学"
+        ],
+        "retrieved_raw_topk": [
+          "用户",
+          "用户爸妈",
+          "索尼微单",
+          "日语",
+          "上海徐汇区"
+        ]
+      },
+      {
+        "question": "用户的老家在哪？",
+        "gold": [
+          "成都",
+          "用户"
+        ],
+        "retrieved_topk": [
+          "用户爸妈",
+          "用户",
+          "林晓",
+          "上海",
+          "上海徐汇区"
+        ],
+        "hit": true,
+        "missed": [
+          "成都"
+        ],
+        "retrieved_raw_topk": [
+          "用户爸妈",
+          "用户",
+          "林晓",
+          "上海",
+          "上海徐汇区"
+        ]
+      },
+      {
+        "question": "用户有没有摄影的爱好？",
+        "gold": [
+          "摄影",
+          "用户"
+        ],
+        "retrieved_topk": [
+          "用户",
+          "相机",
+          "用户爸妈",
+          "照片",
+          "索尼微单"
+        ],
+        "hit": true,
+        "missed": [
+          "摄影"
+        ],
+        "retrieved_raw_topk": [
+          "用户",
+          "相机",
+          "用户爸妈",
+          "照片",
+          "索尼微单"
+        ]
+      }
+    ],
+    "记忆负样本": [
+      {
+        "question": "用户的生日是哪一天？",
+        "category": "missing_profile",
+        "returned_count": 5,
+        "retrieved_topk": [
+          "用户",
+          "用户爸妈",
+          "林晓",
+          "日语",
+          "朋友"
+        ],
+        "top_score": 0.9184,
+        "latency_ms": 231.14
+      },
+      {
+        "question": "用户是否已经结婚？",
+        "category": "missing_relationship",
+        "returned_count": 5,
+        "retrieved_topk": [
+          "用户",
+          "用户爸妈",
+          "朋友",
+          "索尼微单",
+          "林晓"
+        ],
+        "top_score": 0.985,
+        "latency_ms": 229.17
+      },
+      {
+        "question": "用户开什么品牌的汽车？",
+        "category": "missing_possession",
+        "returned_count": 5,
+        "retrieved_topk": [
+          "用户",
+          "用户爸妈",
+          "索尼微单",
+          "地铁",
+          "iPhone"
+        ],
+        "top_score": 0.985,
+        "latency_ms": 230.46
+      },
+      {
+        "question": "用户最喜欢哪一部电影？",
+        "category": "missing_preference",
+        "returned_count": 5,
+        "retrieved_topk": [
+          "用户",
+          "用户爸妈",
+          "爬山",
+          "日本京都",
+          "iPhone"
+        ],
+        "top_score": 0.985,
+        "latency_ms": 242.31
+      },
+      {
+        "question": "用户有几个孩子？",
+        "category": "missing_relationship",
+        "returned_count": 5,
+        "retrieved_topk": [
+          "用户",
+          "用户爸妈",
+          "朋友",
+          "上海徐汇区",
+          "索尼微单"
+        ],
+        "top_score": 0.985,
+        "latency_ms": 220.61
+      },
+      {
+        "question": "用户所在公司的名称是什么？",
+        "category": "missing_profile",
+        "returned_count": 5,
+        "retrieved_topk": [
+          "用户",
+          "用户爸妈",
+          "上海",
+          "成都",
+          "林晓"
+        ],
+        "top_score": 0.8509,
+        "latency_ms": 225.27
+      },
+      {
+        "question": "用户会不会游泳？",
+        "category": "missing_ability",
+        "returned_count": 5,
+        "retrieved_topk": [
+          "用户",
+          "用户爸妈",
+          "相机",
+          "爬山",
+          "日语"
+        ],
+        "top_score": 0.9813,
+        "latency_ms": 226.22
+      },
+      {
+        "question": "用户是不是医生？",
+        "category": "contradictory_profile",
+        "returned_count": 5,
+        "retrieved_topk": [
+          "用户",
+          "用户爸妈",
+          "朋友",
+          "索尼微单",
+          "日语"
+        ],
+        "top_score": 0.985,
+        "latency_ms": 234.76
+      }
+    ]
+  }
+}

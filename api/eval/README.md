@@ -80,12 +80,20 @@ uv run python -m eval.run_eval --skip-check     # 跳过模型可用性自检
 uv run python -m eval.run_eval --only retrieval # 只跑 RAG 正向检索与负样本拒绝
 uv run python -m eval.run_eval --only identity  # 只跑确定性的本人身份安全用例
 uv run python -m eval.run_eval --teardown       # 跑完清理评测数据
+
+# 公共基准与消融实验
+uv run python -m eval.run_eval --benchmark cmteb-t2 --corpus-limit 1000 --query-limit 100
+uv run python -m eval.run_eval --benchmark hotpotqa --sample 100 --hotpot-retrieval bm25 --seed 42 --resume
+uv run python -m eval.run_eval --benchmark hotpotqa --sample 30 --hotpot-retrieval bm25 --verifier compare --seed 42 --resume
+uv run python -m eval.run_eval --benchmark hotpotqa --sample 100 --hotpot-retrieval hybrid --seed 42 --resume
 ```
 
 > 正式跑前会先做**模型可用性自检**：分别调用 embedding / chat / rerank 确认连得通（embedding 还会校验维度是否与 ES 索引一致），不通的必需模型直接中止、rerank 不通则自动跳过其对比列，避免灌了一半数据才发现 key/url 写错。
 > 全程带**进度日志**（写入第几篇语料 / 第几段对话萃取、评测第几题），方便看卡在哪一步。
 
-结果在 `eval/results/`：`report-时间.md`（指标表）+ `details-时间.json`（逐条明细）。
+结果在 `eval/results/`：`report-时间.md`（指标表）+ `details-时间.json`（逐条明细）。HotpotQA 使用 `--resume` 时会在每题后写入同参数 checkpoint；单题失败会记入明细并继续。`hybrid` 是 Meme 主链，`bm25` 是不依赖 Embedding 的消融对照，两者必须分开报告。
+
+首轮固定基线、逐题证据和使用边界见 [`docs/modules/EVALUATION.md`](../../docs/modules/EVALUATION.md) 与 [`docs/evaluation/evidence/2026-08-28/`](../../docs/evaluation/evidence/2026-08-28/README.md)。`eval/results/` 仍默认忽略，新的正式基线应复制到新的日期目录，不能覆盖历史证据。
 
 ## 指标
 

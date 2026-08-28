@@ -1,0 +1,968 @@
+{
+  "manifest": {
+    "generated_at_utc": "2026-08-27T12:41:19.535532+00:00",
+    "git_commit": "b1d6ac2ad82c69c5149c8564927e34aa3fe302a1",
+    "git_dirty": false,
+    "fixture_sha256": "b7e83ccaae73220467866fe74407ef341199ca7cb589f06ad9ab074d5970ddd2",
+    "fixture_counts": {
+      "dedup": 3,
+      "extraction": 10,
+      "memory_identity": 9,
+      "memory_retrieval": 19,
+      "memory_retrieval_negative": 8,
+      "rag_negative": 8,
+      "retrieval": 22,
+      "corpus_documents": 10,
+      "dialogues": 17
+    },
+    "model_source": "encrypted-app-config",
+    "models": {
+      "embedding": "qwen3.7-text-embedding",
+      "chat": "glm-4.6v",
+      "rerank": "(not configured)",
+      "verifier": "qwen3.8-max"
+    },
+    "parameters": {
+      "embedding_dimensions": 1024,
+      "skip_check": true,
+      "skip_setup": true,
+      "only": "retrieval",
+      "corpus_limit": 1000,
+      "query_limit": 100,
+      "sample": 100,
+      "verifier": "none",
+      "seed": 42
+    }
+  },
+  "results": {
+    "RAG 检索": [
+      {
+        "question": "居里夫人获得过几次诺贝尔奖？分别是什么领域？",
+        "gold": [
+          "marie-curie"
+        ],
+        "vector_topk": [
+          "marie-curie",
+          "nobel-prize",
+          "radium",
+          "penicillin",
+          "mount-everest"
+        ],
+        "bm25_topk": [
+          "marie-curie",
+          "nobel-prize"
+        ],
+        "hybrid_topk": [
+          "marie-curie",
+          "nobel-prize",
+          "radium",
+          "penicillin",
+          "mount-everest"
+        ],
+        "hybrid_hit": true
+      },
+      {
+        "question": "钋和镭是谁发现的？什么时候发现的？",
+        "gold": [
+          "marie-curie",
+          "radium"
+        ],
+        "vector_topk": [
+          "radium",
+          "marie-curie",
+          "penicillin",
+          "nobel-prize",
+          "mount-everest"
+        ],
+        "bm25_topk": [
+          "marie-curie",
+          "radium",
+          "penicillin",
+          "yangtze-river",
+          "great-wall"
+        ],
+        "hybrid_topk": [
+          "marie-curie",
+          "radium",
+          "penicillin",
+          "nobel-prize",
+          "solar-system"
+        ],
+        "hybrid_hit": true
+      },
+      {
+        "question": "镭的放射性有多强？",
+        "gold": [
+          "radium"
+        ],
+        "vector_topk": [
+          "radium",
+          "marie-curie",
+          "penicillin",
+          "giant-panda",
+          "nobel-prize"
+        ],
+        "bm25_topk": [
+          "radium",
+          "marie-curie",
+          "solar-system",
+          "great-wall",
+          "giant-panda"
+        ],
+        "hybrid_topk": [
+          "radium",
+          "marie-curie",
+          "penicillin",
+          "giant-panda",
+          "solar-system"
+        ],
+        "hybrid_hit": true
+      },
+      {
+        "question": "镭曾经被用来做什么？为什么后来被禁止？",
+        "gold": [
+          "radium"
+        ],
+        "vector_topk": [
+          "radium",
+          "marie-curie",
+          "penicillin",
+          "nobel-prize",
+          "great-wall"
+        ],
+        "bm25_topk": [
+          "radium",
+          "solar-system",
+          "great-wall",
+          "giant-panda",
+          "marie-curie"
+        ],
+        "hybrid_topk": [
+          "radium",
+          "marie-curie",
+          "penicillin",
+          "nobel-prize",
+          "solar-system"
+        ],
+        "hybrid_hit": true
+      },
+      {
+        "question": "诺贝尔奖是怎么来的？最早有哪几个奖项？",
+        "gold": [
+          "nobel-prize"
+        ],
+        "vector_topk": [
+          "nobel-prize",
+          "penicillin",
+          "marie-curie",
+          "mount-everest",
+          "radium"
+        ],
+        "bm25_topk": [
+          "nobel-prize",
+          "marie-curie",
+          "radium",
+          "great-wall",
+          "yangtze-river"
+        ],
+        "hybrid_topk": [
+          "nobel-prize",
+          "marie-curie",
+          "penicillin",
+          "radium",
+          "great-wall"
+        ],
+        "hybrid_hit": true
+      },
+      {
+        "question": "诺贝尔和平奖由哪个机构评选？",
+        "gold": [
+          "nobel-prize"
+        ],
+        "vector_topk": [
+          "nobel-prize",
+          "penicillin",
+          "marie-curie",
+          "mount-everest",
+          "solar-system"
+        ],
+        "bm25_topk": [
+          "nobel-prize",
+          "marie-curie",
+          "penicillin",
+          "mount-everest",
+          "radium"
+        ],
+        "hybrid_topk": [
+          "nobel-prize",
+          "marie-curie",
+          "penicillin",
+          "mount-everest",
+          "solar-system"
+        ],
+        "hybrid_hit": true
+      },
+      {
+        "question": "发现镭的科学家因为这个发现获得了什么奖？",
+        "gold": [
+          "marie-curie",
+          "nobel-prize"
+        ],
+        "vector_topk": [
+          "marie-curie",
+          "radium",
+          "nobel-prize",
+          "penicillin",
+          "mount-everest"
+        ],
+        "bm25_topk": [
+          "marie-curie",
+          "radium",
+          "penicillin",
+          "nobel-prize",
+          "solar-system"
+        ],
+        "hybrid_topk": [
+          "marie-curie",
+          "radium",
+          "nobel-prize",
+          "penicillin",
+          "mount-everest"
+        ],
+        "hybrid_hit": true
+      },
+      {
+        "question": "青霉素是谁发现的？怎么发现的？",
+        "gold": [
+          "penicillin"
+        ],
+        "vector_topk": [
+          "penicillin",
+          "marie-curie",
+          "radium",
+          "nobel-prize",
+          "mount-everest"
+        ],
+        "bm25_topk": [
+          "penicillin",
+          "marie-curie",
+          "radium",
+          "yangtze-river",
+          "solar-system"
+        ],
+        "hybrid_topk": [
+          "penicillin",
+          "marie-curie",
+          "radium",
+          "nobel-prize",
+          "mount-everest"
+        ],
+        "hybrid_hit": true
+      },
+      {
+        "question": "弗莱明因为青霉素获得了哪一年的诺贝尔奖？",
+        "gold": [
+          "penicillin"
+        ],
+        "vector_topk": [
+          "penicillin",
+          "nobel-prize",
+          "marie-curie",
+          "radium",
+          "mount-everest"
+        ],
+        "bm25_topk": [
+          "penicillin",
+          "nobel-prize",
+          "marie-curie",
+          "radium",
+          "solar-system"
+        ],
+        "hybrid_topk": [
+          "penicillin",
+          "nobel-prize",
+          "marie-curie",
+          "radium",
+          "mount-everest"
+        ],
+        "hybrid_hit": true
+      },
+      {
+        "question": "长城是为了什么修建的？秦始皇做了什么？",
+        "gold": [
+          "great-wall"
+        ],
+        "vector_topk": [
+          "great-wall",
+          "yangtze-river",
+          "giant-panda",
+          "mount-everest",
+          "nobel-prize"
+        ],
+        "bm25_topk": [
+          "great-wall",
+          "radium",
+          "solar-system",
+          "marie-curie",
+          "giant-panda"
+        ],
+        "hybrid_topk": [
+          "great-wall",
+          "yangtze-river",
+          "giant-panda",
+          "mount-everest",
+          "nobel-prize"
+        ],
+        "hybrid_hit": true
+      },
+      {
+        "question": "现存保存最好的长城是哪个朝代修的？",
+        "gold": [
+          "great-wall"
+        ],
+        "vector_topk": [
+          "great-wall",
+          "yangtze-river",
+          "giant-panda",
+          "mount-everest",
+          "solar-system"
+        ],
+        "bm25_topk": [
+          "great-wall",
+          "yangtze-river",
+          "solar-system",
+          "radium",
+          "marie-curie"
+        ],
+        "hybrid_topk": [
+          "great-wall",
+          "yangtze-river",
+          "giant-panda",
+          "mount-everest",
+          "solar-system"
+        ],
+        "hybrid_hit": true
+      },
+      {
+        "question": "珠穆朗玛峰有多高？在哪两个国家交界？",
+        "gold": [
+          "mount-everest"
+        ],
+        "vector_topk": [
+          "mount-everest",
+          "great-wall",
+          "yangtze-river",
+          "giant-panda",
+          "solar-system"
+        ],
+        "bm25_topk": [
+          "mount-everest",
+          "giant-panda",
+          "photosynthesis",
+          "marie-curie",
+          "yangtze-river"
+        ],
+        "hybrid_topk": [
+          "mount-everest",
+          "giant-panda",
+          "great-wall",
+          "yangtze-river",
+          "solar-system"
+        ],
+        "hybrid_hit": true
+      },
+      {
+        "question": "谁第一个登顶珠穆朗玛峰？",
+        "gold": [
+          "mount-everest"
+        ],
+        "vector_topk": [
+          "mount-everest",
+          "penicillin",
+          "nobel-prize",
+          "yangtze-river",
+          "great-wall"
+        ],
+        "bm25_topk": [
+          "mount-everest"
+        ],
+        "hybrid_topk": [
+          "mount-everest",
+          "penicillin",
+          "nobel-prize",
+          "yangtze-river",
+          "great-wall"
+        ],
+        "hybrid_hit": true
+      },
+      {
+        "question": "大熊猫主要吃什么？分布在哪里？",
+        "gold": [
+          "giant-panda"
+        ],
+        "vector_topk": [
+          "giant-panda",
+          "yangtze-river",
+          "mount-everest",
+          "great-wall",
+          "photosynthesis"
+        ],
+        "bm25_topk": [
+          "giant-panda",
+          "yangtze-river",
+          "photosynthesis",
+          "penicillin",
+          "mount-everest"
+        ],
+        "hybrid_topk": [
+          "giant-panda",
+          "yangtze-river",
+          "photosynthesis",
+          "mount-everest",
+          "great-wall"
+        ],
+        "hybrid_hit": true
+      },
+      {
+        "question": "大熊猫的保护级别有什么变化？",
+        "gold": [
+          "giant-panda"
+        ],
+        "vector_topk": [
+          "giant-panda",
+          "yangtze-river",
+          "solar-system",
+          "mount-everest",
+          "great-wall"
+        ],
+        "bm25_topk": [
+          "giant-panda",
+          "yangtze-river",
+          "radium",
+          "solar-system",
+          "marie-curie"
+        ],
+        "hybrid_topk": [
+          "giant-panda",
+          "yangtze-river",
+          "solar-system",
+          "mount-everest",
+          "great-wall"
+        ],
+        "hybrid_hit": true
+      },
+      {
+        "question": "光合作用把什么转化成什么？发生在植物的哪里？",
+        "gold": [
+          "photosynthesis"
+        ],
+        "vector_topk": [
+          "photosynthesis",
+          "solar-system",
+          "marie-curie",
+          "mount-everest",
+          "giant-panda"
+        ],
+        "bm25_topk": [
+          "photosynthesis",
+          "radium",
+          "solar-system",
+          "marie-curie",
+          "great-wall"
+        ],
+        "hybrid_topk": [
+          "photosynthesis",
+          "solar-system",
+          "marie-curie",
+          "mount-everest",
+          "giant-panda"
+        ],
+        "hybrid_hit": true
+      },
+      {
+        "question": "为什么树叶是绿色的？",
+        "gold": [
+          "photosynthesis"
+        ],
+        "vector_topk": [
+          "photosynthesis",
+          "radium",
+          "solar-system",
+          "giant-panda",
+          "mount-everest"
+        ],
+        "bm25_topk": [
+          "photosynthesis",
+          "yangtze-river",
+          "solar-system",
+          "great-wall",
+          "radium"
+        ],
+        "hybrid_topk": [
+          "photosynthesis",
+          "solar-system",
+          "radium",
+          "giant-panda",
+          "mount-everest"
+        ],
+        "hybrid_hit": true
+      },
+      {
+        "question": "太阳系八大行星按离太阳远近怎么排？",
+        "gold": [
+          "solar-system"
+        ],
+        "vector_topk": [
+          "solar-system",
+          "radium",
+          "mount-everest",
+          "great-wall",
+          "photosynthesis"
+        ],
+        "bm25_topk": [
+          "solar-system"
+        ],
+        "hybrid_topk": [
+          "solar-system",
+          "radium",
+          "mount-everest",
+          "great-wall",
+          "photosynthesis"
+        ],
+        "hybrid_hit": true
+      },
+      {
+        "question": "太阳系最大的行星是哪个？冥王星为什么被除名？",
+        "gold": [
+          "solar-system"
+        ],
+        "vector_topk": [
+          "solar-system",
+          "great-wall",
+          "mount-everest",
+          "giant-panda",
+          "photosynthesis"
+        ],
+        "bm25_topk": [
+          "solar-system",
+          "great-wall",
+          "radium",
+          "yangtze-river",
+          "penicillin"
+        ],
+        "hybrid_topk": [
+          "solar-system",
+          "great-wall",
+          "giant-panda",
+          "radium",
+          "yangtze-river"
+        ],
+        "hybrid_hit": true
+      },
+      {
+        "question": "长江发源于哪里？最后流入哪个海？",
+        "gold": [
+          "yangtze-river"
+        ],
+        "vector_topk": [
+          "yangtze-river",
+          "great-wall",
+          "mount-everest",
+          "giant-panda",
+          "penicillin"
+        ],
+        "bm25_topk": [
+          "yangtze-river"
+        ],
+        "hybrid_topk": [
+          "yangtze-river",
+          "great-wall",
+          "mount-everest",
+          "giant-panda",
+          "penicillin"
+        ],
+        "hybrid_hit": true
+      },
+      {
+        "question": "三峡大坝有什么功能？",
+        "gold": [
+          "yangtze-river"
+        ],
+        "vector_topk": [
+          "yangtze-river",
+          "great-wall",
+          "giant-panda",
+          "mount-everest",
+          "penicillin"
+        ],
+        "bm25_topk": [
+          "yangtze-river"
+        ],
+        "hybrid_topk": [
+          "yangtze-river",
+          "great-wall",
+          "giant-panda",
+          "mount-everest",
+          "penicillin"
+        ],
+        "hybrid_hit": true
+      },
+      {
+        "question": "长江和珠穆朗玛峰分别和青藏高原有什么关系？",
+        "gold": [
+          "yangtze-river",
+          "mount-everest"
+        ],
+        "vector_topk": [
+          "yangtze-river",
+          "mount-everest",
+          "great-wall",
+          "giant-panda",
+          "solar-system"
+        ],
+        "bm25_topk": [
+          "yangtze-river",
+          "mount-everest",
+          "nobel-prize",
+          "photosynthesis",
+          "penicillin"
+        ],
+        "hybrid_topk": [
+          "yangtze-river",
+          "mount-everest",
+          "great-wall",
+          "giant-panda",
+          "solar-system"
+        ],
+        "hybrid_hit": true
+      }
+    ],
+    "RAG 负样本": [
+      {
+        "variant": "纯向量",
+        "question": "量子纠缠实验最近取得了什么突破？",
+        "category": "out_of_corpus",
+        "returned_count": 5,
+        "retrieved_topk": [
+          "penicillin",
+          "mount-everest",
+          "marie-curie",
+          "great-wall",
+          "radium"
+        ],
+        "latency_ms": 232.59
+      },
+      {
+        "variant": "纯向量",
+        "question": "Python 3.15 新增了哪些语法？",
+        "category": "out_of_corpus",
+        "returned_count": 5,
+        "retrieved_topk": [
+          "penicillin",
+          "solar-system",
+          "yangtze-river",
+          "radium",
+          "nobel-prize"
+        ],
+        "latency_ms": 192.5
+      },
+      {
+        "variant": "纯向量",
+        "question": "北京今天的天气和空气质量怎么样？",
+        "category": "realtime",
+        "returned_count": 5,
+        "retrieved_topk": [
+          "solar-system",
+          "great-wall",
+          "giant-panda",
+          "mount-everest",
+          "radium"
+        ],
+        "latency_ms": 211.94
+      },
+      {
+        "variant": "纯向量",
+        "question": "如何诊断 Kubernetes Pod 的 CrashLoopBackOff？",
+        "category": "out_of_corpus",
+        "returned_count": 5,
+        "retrieved_topk": [
+          "giant-panda",
+          "solar-system",
+          "penicillin",
+          "mount-everest",
+          "marie-curie"
+        ],
+        "latency_ms": 281.88
+      },
+      {
+        "variant": "纯向量",
+        "question": "2026 年世界杯冠军是谁？",
+        "category": "future_or_unknown",
+        "returned_count": 5,
+        "retrieved_topk": [
+          "solar-system",
+          "great-wall",
+          "mount-everest",
+          "giant-panda",
+          "nobel-prize"
+        ],
+        "latency_ms": 213.21
+      },
+      {
+        "variant": "纯向量",
+        "question": "红楼梦中贾宝玉最后去了哪里？",
+        "category": "out_of_corpus",
+        "returned_count": 5,
+        "retrieved_topk": [
+          "mount-everest",
+          "giant-panda",
+          "solar-system",
+          "yangtze-river",
+          "marie-curie"
+        ],
+        "latency_ms": 203.08
+      },
+      {
+        "variant": "纯向量",
+        "question": "公司今年第三季度的营收是多少？",
+        "category": "private_unknown",
+        "returned_count": 5,
+        "retrieved_topk": [
+          "yangtze-river",
+          "solar-system",
+          "giant-panda",
+          "penicillin",
+          "mount-everest"
+        ],
+        "latency_ms": 217.13
+      },
+      {
+        "variant": "纯向量",
+        "question": "请解释 CAP 定理中的网络分区。",
+        "category": "out_of_corpus",
+        "returned_count": 5,
+        "retrieved_topk": [
+          "mount-everest",
+          "penicillin",
+          "giant-panda",
+          "solar-system",
+          "photosynthesis"
+        ],
+        "latency_ms": 182.36
+      },
+      {
+        "variant": "纯BM25",
+        "question": "量子纠缠实验最近取得了什么突破？",
+        "category": "out_of_corpus",
+        "returned_count": 1,
+        "retrieved_topk": [
+          "penicillin"
+        ],
+        "latency_ms": 10.95
+      },
+      {
+        "variant": "纯BM25",
+        "question": "Python 3.15 新增了哪些语法？",
+        "category": "out_of_corpus",
+        "returned_count": 4,
+        "retrieved_topk": [
+          "penicillin",
+          "marie-curie",
+          "yangtze-river",
+          "photosynthesis"
+        ],
+        "latency_ms": 10.34
+      },
+      {
+        "variant": "纯BM25",
+        "question": "北京今天的天气和空气质量怎么样？",
+        "category": "realtime",
+        "returned_count": 5,
+        "retrieved_topk": [
+          "photosynthesis",
+          "radium",
+          "penicillin",
+          "yangtze-river",
+          "great-wall"
+        ],
+        "latency_ms": 26.06
+      },
+      {
+        "variant": "纯BM25",
+        "question": "如何诊断 Kubernetes Pod 的 CrashLoopBackOff？",
+        "category": "out_of_corpus",
+        "returned_count": 5,
+        "retrieved_topk": [
+          "radium",
+          "solar-system",
+          "marie-curie",
+          "great-wall",
+          "giant-panda"
+        ],
+        "latency_ms": 32.18
+      },
+      {
+        "variant": "纯BM25",
+        "question": "2026 年世界杯冠军是谁？",
+        "category": "future_or_unknown",
+        "returned_count": 5,
+        "retrieved_topk": [
+          "great-wall",
+          "solar-system",
+          "radium",
+          "marie-curie",
+          "mount-everest"
+        ],
+        "latency_ms": 25.37
+      },
+      {
+        "variant": "纯BM25",
+        "question": "红楼梦中贾宝玉最后去了哪里？",
+        "category": "out_of_corpus",
+        "returned_count": 0,
+        "retrieved_topk": [],
+        "latency_ms": 7.87
+      },
+      {
+        "variant": "纯BM25",
+        "question": "公司今年第三季度的营收是多少？",
+        "category": "private_unknown",
+        "returned_count": 5,
+        "retrieved_topk": [
+          "radium",
+          "solar-system",
+          "marie-curie",
+          "great-wall",
+          "giant-panda"
+        ],
+        "latency_ms": 28.6
+      },
+      {
+        "variant": "纯BM25",
+        "question": "请解释 CAP 定理中的网络分区。",
+        "category": "out_of_corpus",
+        "returned_count": 5,
+        "retrieved_topk": [
+          "penicillin",
+          "great-wall",
+          "photosynthesis",
+          "radium",
+          "solar-system"
+        ],
+        "latency_ms": 29.27
+      },
+      {
+        "variant": "混合",
+        "question": "量子纠缠实验最近取得了什么突破？",
+        "category": "out_of_corpus",
+        "returned_count": 5,
+        "retrieved_topk": [
+          "penicillin",
+          "mount-everest",
+          "marie-curie",
+          "great-wall",
+          "radium"
+        ],
+        "latency_ms": 229.53
+      },
+      {
+        "variant": "混合",
+        "question": "Python 3.15 新增了哪些语法？",
+        "category": "out_of_corpus",
+        "returned_count": 5,
+        "retrieved_topk": [
+          "penicillin",
+          "solar-system",
+          "yangtze-river",
+          "radium",
+          "nobel-prize"
+        ],
+        "latency_ms": 220.6
+      },
+      {
+        "variant": "混合",
+        "question": "北京今天的天气和空气质量怎么样？",
+        "category": "realtime",
+        "returned_count": 5,
+        "retrieved_topk": [
+          "solar-system",
+          "great-wall",
+          "giant-panda",
+          "radium",
+          "marie-curie"
+        ],
+        "latency_ms": 234.8
+      },
+      {
+        "variant": "混合",
+        "question": "如何诊断 Kubernetes Pod 的 CrashLoopBackOff？",
+        "category": "out_of_corpus",
+        "returned_count": 5,
+        "retrieved_topk": [
+          "giant-panda",
+          "solar-system",
+          "penicillin",
+          "radium",
+          "marie-curie"
+        ],
+        "latency_ms": 270.59
+      },
+      {
+        "variant": "混合",
+        "question": "2026 年世界杯冠军是谁？",
+        "category": "future_or_unknown",
+        "returned_count": 5,
+        "retrieved_topk": [
+          "solar-system",
+          "great-wall",
+          "mount-everest",
+          "penicillin",
+          "radium"
+        ],
+        "latency_ms": 253.89
+      },
+      {
+        "variant": "混合",
+        "question": "红楼梦中贾宝玉最后去了哪里？",
+        "category": "out_of_corpus",
+        "returned_count": 5,
+        "retrieved_topk": [
+          "mount-everest",
+          "giant-panda",
+          "solar-system",
+          "yangtze-river",
+          "marie-curie"
+        ],
+        "latency_ms": 203.24
+      },
+      {
+        "variant": "混合",
+        "question": "公司今年第三季度的营收是多少？",
+        "category": "private_unknown",
+        "returned_count": 5,
+        "retrieved_topk": [
+          "solar-system",
+          "yangtze-river",
+          "penicillin",
+          "giant-panda",
+          "mount-everest"
+        ],
+        "latency_ms": 259.75
+      },
+      {
+        "variant": "混合",
+        "question": "请解释 CAP 定理中的网络分区。",
+        "category": "out_of_corpus",
+        "returned_count": 5,
+        "retrieved_topk": [
+          "penicillin",
+          "photosynthesis",
+          "great-wall",
+          "mount-everest",
+          "giant-panda"
+        ],
+        "latency_ms": 294.1
+      }
+    ]
+  }
+}

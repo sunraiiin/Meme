@@ -1,0 +1,939 @@
+{
+  "manifest": {
+    "generated_at_utc": "2026-08-28T02:04:47.113238+00:00",
+    "git_commit": "093ac29a53fb074274ed1199d745f520670d4064",
+    "git_dirty": false,
+    "fixture_sha256": "b7e83ccaae73220467866fe74407ef341199ca7cb589f06ad9ab074d5970ddd2",
+    "fixture_counts": {
+      "dedup": 3,
+      "extraction": 10,
+      "memory_identity": 9,
+      "memory_retrieval": 19,
+      "memory_retrieval_negative": 8,
+      "rag_negative": 8,
+      "retrieval": 22,
+      "corpus_documents": 10,
+      "dialogues": 17
+    },
+    "model_source": "encrypted-app-config",
+    "models": {
+      "embedding": "qwen3.7-text-embedding",
+      "chat": "glm-4.6v",
+      "rerank": "(not configured)",
+      "verifier": "qwen3.8-max"
+    },
+    "parameters": {
+      "embedding_dimensions": 1024,
+      "benchmark": "hotpotqa",
+      "corpus_limit": 1000,
+      "query_limit": 100,
+      "sample": 30,
+      "hotpot_retrieval": "bm25",
+      "verifier": "compare",
+      "seed": 42,
+      "resume": true
+    }
+  },
+  "results": [
+    {
+      "qid": "5a78e86f55429974737f78fb",
+      "question": "What does the unique calendar system in Japan, who the first Emperor of Japan created, emphasize?",
+      "type": "bridge",
+      "gold_answer": "the long history of Japan",
+      "gold_titles": [
+        "Japanese imperial year",
+        "Emperor Jimmu"
+      ],
+      "retrieved_topk_titles": [
+        "Japanese imperial year",
+        "Emperor Jimmu",
+        "Calendar date",
+        "Luoxia Hong"
+      ],
+      "retrieval_recall": 1.0,
+      "pred": "the long history of Japan and the Imperial dynasty",
+      "em": 0.0,
+      "f1": 0.7273,
+      "verifier_passes": {
+        "same": 1,
+        "cross": 1
+      },
+      "latency_ms": {
+        "ingest": 46.66,
+        "retrieval": 5.63,
+        "answer": 6377.1,
+        "total": 27463.62
+      }
+    },
+    {
+      "qid": "5abec9b25542997ec76fd366",
+      "question": "What city was the capital of the Ostrogothic Kingdom and the birth place of Ornella Fiorentini?",
+      "type": "bridge",
+      "gold_answer": "Ravenna (] , also locally ] ; Romagnol: \"Ravèna\" ) is the capital city of the Province of Ravenna",
+      "gold_titles": [
+        "Ravenna",
+        "Ornella Fiorentini"
+      ],
+      "retrieved_topk_titles": [
+        "Ravenna",
+        "Ostrogothic Ravenna",
+        "Council of Orange (529)",
+        "Ornella Fiorentini"
+      ],
+      "retrieval_recall": 1.0,
+      "pred": "Ravenna",
+      "em": 0.0,
+      "f1": 0.1538,
+      "verifier_passes": {
+        "same": 1,
+        "cross": 1
+      },
+      "latency_ms": {
+        "ingest": 35.45,
+        "retrieval": 5.34,
+        "answer": 4401.65,
+        "total": 12370.39
+      }
+    },
+    {
+      "qid": "5ae72e5d5542991e8301cba8",
+      "question": "What position did the winner of the MVP in Pool C of the 2017 WBC play?",
+      "type": "bridge",
+      "gold_answer": "third baseman",
+      "gold_titles": [
+        "2017 World Baseball Classic – Pool C",
+        "Manny Machado"
+      ],
+      "retrieved_topk_titles": [
+        "2017 World Baseball Classic – Pool C",
+        "2017 Fed Cup Europe/Africa Zone Group I – Pool C",
+        "2017 Fed Cup Americas Zone Group II – Pool C",
+        "2017 Fed Cup Asia/Oceania Zone Group II – Pool C"
+      ],
+      "retrieval_recall": 0.5,
+      "pred": "",
+      "em": 0.0,
+      "f1": 0.0,
+      "verifier_passes": {
+        "same": 0,
+        "cross": 0
+      },
+      "latency_ms": {
+        "ingest": 34.53,
+        "retrieval": 6.16,
+        "answer": 30232.72,
+        "total": 30333.72
+      }
+    },
+    {
+      "qid": "5ae27f22554299495565da8d",
+      "question": "In what year was the mathematician husband of Anneli Cahn Lax born?",
+      "type": "bridge",
+      "gold_answer": "1926",
+      "gold_titles": [
+        "Anneli Cahn Lax",
+        "Peter Lax"
+      ],
+      "retrieved_topk_titles": [
+        "Anneli Cahn Lax",
+        "Peter Lax",
+        "Thaleia Zariphopoulou",
+        "Humphrey Critchley-Salmonson"
+      ],
+      "retrieval_recall": 1.0,
+      "pred": "1926",
+      "em": 1.0,
+      "f1": 1.0,
+      "verifier_passes": {
+        "same": 1,
+        "cross": 1
+      },
+      "latency_ms": {
+        "ingest": 41.03,
+        "retrieval": 7.73,
+        "answer": 5610.7,
+        "total": 34544.88
+      }
+    },
+    {
+      "qid": "5ae0f3b955429920d523424e",
+      "question": "Are The Writer and Jewish Currents both magazines ?",
+      "type": "comparison",
+      "gold_answer": "yes",
+      "gold_titles": [
+        "The Writer",
+        "Jewish Currents"
+      ],
+      "retrieved_topk_titles": [
+        "Janice Eidus",
+        "Morris Schappes",
+        "Jewish Currents",
+        "Google Play Newsstand"
+      ],
+      "retrieval_recall": 0.5,
+      "pred": "no",
+      "em": 0.0,
+      "f1": 0.0,
+      "verifier_passes": {
+        "same": 1,
+        "cross": 0
+      },
+      "latency_ms": {
+        "ingest": 38.06,
+        "retrieval": 6.09,
+        "answer": 14831.95,
+        "total": 31748.28
+      }
+    },
+    {
+      "qid": "5ae824295542997ec272772f",
+      "question": "Dan Scalco is best known as a contributing author for a magazine owned by who?",
+      "type": "bridge",
+      "gold_answer": "Peter Shea",
+      "gold_titles": [
+        "Dan Scalco",
+        "Entrepreneur (magazine)"
+      ],
+      "retrieved_topk_titles": [
+        "Dan Scalco",
+        "David France (writer)",
+        "Blurt (magazine)",
+        "Bill Muter"
+      ],
+      "retrieval_recall": 0.5,
+      "pred": "",
+      "em": 0.0,
+      "f1": 0.0,
+      "verifier_passes": {
+        "same": 0,
+        "cross": 0
+      },
+      "latency_ms": {
+        "ingest": 41.64,
+        "retrieval": 6.72,
+        "answer": 22485.02,
+        "total": 22585.01
+      }
+    },
+    {
+      "qid": "5adf88995542993344016cd4",
+      "question": "Which city is the home of the character that might be based on John Capozzi?",
+      "type": "bridge",
+      "gold_answer": "Baltimore",
+      "gold_titles": [
+        "John Capozzi",
+        "Tommy Carcetti"
+      ],
+      "retrieved_topk_titles": [
+        "Direct from Brooklyn",
+        "Lincoln (album)",
+        "Fictional portrayals of psychopaths",
+        "Khirbet Qeiyafa"
+      ],
+      "retrieval_recall": 0.0,
+      "pred": "Brooklyn",
+      "em": 0.0,
+      "f1": 0.0,
+      "verifier_passes": {
+        "same": 0,
+        "cross": 0
+      },
+      "latency_ms": {
+        "ingest": 39.81,
+        "retrieval": 6.92,
+        "answer": 8674.97,
+        "total": 17558.39
+      }
+    },
+    {
+      "qid": "5a8b448255429971feec468c",
+      "question": "Stephen Graham starred in a film in 2006, directed by whom?",
+      "type": "bridge",
+      "gold_answer": "directed by Shane Meadows",
+      "gold_titles": [
+        "This Is England",
+        "Stephen Graham"
+      ],
+      "retrieved_topk_titles": [
+        "Pit Fighter (film)",
+        "Awaydays",
+        "Stephen Graham",
+        "Public Enemies (2009 film)"
+      ],
+      "retrieval_recall": 0.5,
+      "pred": "",
+      "em": 0.0,
+      "f1": 0.0,
+      "verifier_passes": {
+        "same": 0,
+        "cross": 0
+      },
+      "latency_ms": {
+        "ingest": 35.16,
+        "retrieval": 5.26,
+        "answer": 25474.26,
+        "total": 25570.54
+      }
+    },
+    {
+      "qid": "5a75f1a755429976ec32bcb1",
+      "question": "Which actress played a character that dated Mark Brendanawicz?",
+      "type": "bridge",
+      "gold_answer": "Rashida Jones",
+      "gold_titles": [
+        "Parks and Recreation",
+        "Mark Brendanawicz"
+      ],
+      "retrieved_topk_titles": [
+        "Harriet Hayes",
+        "Marlon Dingle",
+        "Marina Ruy Barbosa",
+        "Mark Brendanawicz"
+      ],
+      "retrieval_recall": 0.5,
+      "pred": "",
+      "em": 0.0,
+      "f1": 0.0,
+      "verifier_passes": {
+        "same": 0,
+        "cross": 0
+      },
+      "latency_ms": {
+        "ingest": 37.73,
+        "retrieval": 6.07,
+        "answer": 43351.4,
+        "total": 43445.36
+      }
+    },
+    {
+      "qid": "5abd0b6b5542996e802b46b4",
+      "question": "Finally includes the song that peaked at what on the US Hot 100",
+      "type": "bridge",
+      "gold_answer": "number five",
+      "gold_titles": [
+        "Finally (CeCe Peniston song)",
+        "Finally (CeCe Peniston album)"
+      ],
+      "retrieved_topk_titles": [
+        "Finally (CeCe Peniston song)",
+        "Wobble (song)",
+        "Tyga discography",
+        "Finally (CeCe Peniston album)"
+      ],
+      "retrieval_recall": 1.0,
+      "pred": "number five",
+      "em": 1.0,
+      "f1": 1.0,
+      "verifier_passes": {
+        "same": 1,
+        "cross": 1
+      },
+      "latency_ms": {
+        "ingest": 44.78,
+        "retrieval": 5.79,
+        "answer": 17951.04,
+        "total": 24213.28
+      }
+    },
+    {
+      "qid": "5ab85e195542992aa3b8c8c5",
+      "question": "What profession does Alex Beard and Tony Hall, Baron Hall of Birkenhead have in common?",
+      "type": "bridge",
+      "gold_answer": "director",
+      "gold_titles": [
+        "Tony Hall, Baron Hall of Birkenhead",
+        "Alex Beard (arts manager)"
+      ],
+      "retrieved_topk_titles": [
+        "Tony Hall, Baron Hall of Birkenhead",
+        "Alex Beard (arts manager)",
+        "Baron Stanley of Alderley",
+        "Henry Cohen, 1st Baron Cohen of Birkenhead"
+      ],
+      "retrieval_recall": 1.0,
+      "pred": "",
+      "em": 0.0,
+      "f1": 0.0,
+      "verifier_passes": {
+        "same": 0,
+        "cross": 0
+      },
+      "latency_ms": {
+        "ingest": 40.46,
+        "retrieval": 6.61,
+        "answer": 34349.71,
+        "total": 34447.52
+      }
+    },
+    {
+      "qid": "5a79f37a5542996a35c17045",
+      "question": "Butautas tried to depose his uncle who between which years ?",
+      "type": "bridge",
+      "gold_answer": "from 1345 to 1377",
+      "gold_titles": [
+        "Butautas",
+        "Algirdas"
+      ],
+      "retrieved_topk_titles": [
+        "Khachik II of Cilicia",
+        "Butautas",
+        "Liu Yanzuo",
+        "Lithuanian Civil War (1389–92)"
+      ],
+      "retrieval_recall": 0.5,
+      "pred": "Not specified in the paragraphs",
+      "em": 0.0,
+      "f1": 0.0,
+      "verifier_passes": {
+        "same": 1,
+        "cross": 0
+      },
+      "latency_ms": {
+        "ingest": 43.32,
+        "retrieval": 5.63,
+        "answer": 9897.28,
+        "total": 32405.79
+      }
+    },
+    {
+      "qid": "5a7fb1e55542995d8a8ddef7",
+      "question": "Which documentary film premiered first, Grizzly Man or Pray the Devil Back to Hell?",
+      "type": "comparison",
+      "gold_answer": "Grizzly Man",
+      "gold_titles": [
+        "Pray the Devil Back to Hell",
+        "Grizzly Man"
+      ],
+      "retrieved_topk_titles": [
+        "Pray the Devil Back to Hell",
+        "Coyotes (song)",
+        "Doug Pray",
+        "Surfwise"
+      ],
+      "retrieval_recall": 0.5,
+      "pred": "Grizzly Man",
+      "em": 1.0,
+      "f1": 1.0,
+      "verifier_passes": {
+        "same": 1,
+        "cross": 1
+      },
+      "latency_ms": {
+        "ingest": 39.05,
+        "retrieval": 6.64,
+        "answer": 10070.36,
+        "total": 34348.92
+      }
+    },
+    {
+      "qid": "5ac311925542995ef918c0de",
+      "question": "Are Horace Ové and A. Edward Sutherland both photographers?",
+      "type": "comparison",
+      "gold_answer": "no",
+      "gold_titles": [
+        "Horace Ové",
+        "A. Edward Sutherland"
+      ],
+      "retrieved_topk_titles": [
+        "A. Edward Sutherland",
+        "Coming Through",
+        "Horace Ové",
+        "It's the Old Army Game"
+      ],
+      "retrieval_recall": 1.0,
+      "pred": "no",
+      "em": 1.0,
+      "f1": 1.0,
+      "verifier_passes": {
+        "same": 1,
+        "cross": 1
+      },
+      "latency_ms": {
+        "ingest": 31.44,
+        "retrieval": 5.53,
+        "answer": 2431.29,
+        "total": 12963.53
+      }
+    },
+    {
+      "qid": "5a712e895542994082a3e636",
+      "question": "C.J. Hunter was tested positive for which type of injected steroid before he competed in the 2000 Summer Olympic Games?",
+      "type": "bridge",
+      "gold_answer": "anabolic–androgenic steroid (AAS)",
+      "gold_titles": [
+        "C. J. Hunter",
+        "Nandrolone"
+      ],
+      "retrieved_topk_titles": [
+        "C. J. Hunter",
+        "Hysen Pulaku",
+        "Scot Hollonbeck",
+        "Trinidad and Tobago at the 2008 Summer Olympics"
+      ],
+      "retrieval_recall": 0.5,
+      "pred": "Nandrolone",
+      "em": 0.0,
+      "f1": 0.0,
+      "verifier_passes": {
+        "same": 1,
+        "cross": 1
+      },
+      "latency_ms": {
+        "ingest": 51.19,
+        "retrieval": 8.41,
+        "answer": 4799.9,
+        "total": 11108.06
+      }
+    },
+    {
+      "qid": "5a7da0915542990b8f5039d4",
+      "question": "What is the pioneer who has a park dedicated to him near Lexington, North Carolina famous for?",
+      "type": "bridge",
+      "gold_answer": "Wilderness Road",
+      "gold_titles": [
+        "Daniel Boone",
+        "Boone's Cave Park"
+      ],
+      "retrieved_topk_titles": [
+        "Boone's Cave Park",
+        "Daniel Boone",
+        "Henry Shoaf Farm",
+        "Kentucky Horse Park"
+      ],
+      "retrieval_recall": 1.0,
+      "pred": "his exploration and settlement of what is now Kentucky",
+      "em": 0.0,
+      "f1": 0.0,
+      "verifier_passes": {
+        "same": 1,
+        "cross": 1
+      },
+      "latency_ms": {
+        "ingest": 38.64,
+        "retrieval": 7.12,
+        "answer": 4514.65,
+        "total": 10342.94
+      }
+    },
+    {
+      "qid": "5a84e21d5542997b5ce3ff7c",
+      "question": "The actress and singer Heather Morris is best known for her role in which series, becoming a regular character in the second season?",
+      "type": "bridge",
+      "gold_answer": "Glee",
+      "gold_titles": [
+        "Heather Morris",
+        "Brittany Pierce"
+      ],
+      "retrieved_topk_titles": [
+        "Santana Lopez",
+        "Brittany Pierce",
+        "Crazy Eyes (character)",
+        "Heather Morris"
+      ],
+      "retrieval_recall": 1.0,
+      "pred": "Glee",
+      "em": 1.0,
+      "f1": 1.0,
+      "verifier_passes": {
+        "same": 1,
+        "cross": 1
+      },
+      "latency_ms": {
+        "ingest": 35.76,
+        "retrieval": 9.3,
+        "answer": 2722.07,
+        "total": 13984.61
+      }
+    },
+    {
+      "qid": "5a7744e45542993569682d37",
+      "question": "Who was born first, Juan Rulfo or John le Carré?",
+      "type": "comparison",
+      "gold_answer": "Juan Rulfo",
+      "gold_titles": [
+        "Juan Rulfo",
+        "John le Carré"
+      ],
+      "retrieved_topk_titles": [
+        "The Incongruous Spy",
+        "The Deadly Affair",
+        "John le Carré",
+        "Control (fictional character)"
+      ],
+      "retrieval_recall": 0.5,
+      "pred": "",
+      "em": 0.0,
+      "f1": 0.0,
+      "verifier_passes": {
+        "same": 0,
+        "cross": 0
+      },
+      "latency_ms": {
+        "ingest": 33.66,
+        "retrieval": 6.36,
+        "answer": 50096.42,
+        "total": 50199.01
+      }
+    },
+    {
+      "qid": "5a74122f55429929fddd83da",
+      "question": "What was the lead single from Boys Like Girls album on which frontman, Martin Johnson co-wrote a song with Taylor Swift? A: Love Drunk",
+      "type": "bridge",
+      "gold_answer": "Love Drunk",
+      "gold_titles": [
+        "Love Drunk",
+        "Two Is Better Than One"
+      ],
+      "retrieved_topk_titles": [
+        "Two Is Better Than One",
+        "Love Drunk",
+        "Heart Heart Heartbreak",
+        "Acapella (Karmin song)"
+      ],
+      "retrieval_recall": 1.0,
+      "pred": "Love Drunk",
+      "em": 1.0,
+      "f1": 1.0,
+      "verifier_passes": {
+        "same": 1,
+        "cross": 1
+      },
+      "latency_ms": {
+        "ingest": 33.74,
+        "retrieval": 7.3,
+        "answer": 9706.7,
+        "total": 25231.18
+      }
+    },
+    {
+      "qid": "5a85f2f55542997b5ce40036",
+      "question": "Which genus of flowering plants has the most species, Caesalpinia or Achimenes?",
+      "type": "comparison",
+      "gold_answer": "Caesalpinia",
+      "gold_titles": [
+        "Caesalpinia",
+        "Achimenes"
+      ],
+      "retrieved_topk_titles": [
+        "Zeltnera",
+        "Austrobaileyales",
+        "Caesalpinia",
+        "Echinacea"
+      ],
+      "retrieval_recall": 0.5,
+      "pred": "Caesalpinia",
+      "em": 1.0,
+      "f1": 1.0,
+      "verifier_passes": {
+        "same": 0,
+        "cross": 0
+      },
+      "latency_ms": {
+        "ingest": 37.16,
+        "retrieval": 6.36,
+        "answer": 13923.54,
+        "total": 33686.16
+      }
+    },
+    {
+      "qid": "5ab81cff5542990e739ec827",
+      "question": "Which novelist was educated in London, C. S. Forester or Helen Zahavi?",
+      "type": "comparison",
+      "gold_answer": "Helen Zahavi",
+      "gold_titles": [
+        "C. S. Forester",
+        "Helen Zahavi"
+      ],
+      "retrieved_topk_titles": [
+        "Helen Zahavi",
+        "Dirty Weekend (novel)",
+        "Dirty Weekend (1993 film)",
+        "The Happy Return"
+      ],
+      "retrieval_recall": 0.5,
+      "pred": "Helen Zahavi",
+      "em": 1.0,
+      "f1": 1.0,
+      "verifier_passes": {
+        "same": 1,
+        "cross": 1
+      },
+      "latency_ms": {
+        "ingest": 33.37,
+        "retrieval": 6.37,
+        "answer": 2088.63,
+        "total": 6987.48
+      }
+    },
+    {
+      "qid": "5ae7edee554299540e5a56ad",
+      "question": "The Church of the Guanche People was founded in the city that is on the most populated island of what larger area?",
+      "type": "bridge",
+      "gold_answer": "Macaronesia",
+      "gold_titles": [
+        "Church of the Guanche People",
+        "Tenerife"
+      ],
+      "retrieved_topk_titles": [
+        "Wheeling Island",
+        "Church of the Guanche People",
+        "Mactan",
+        "Vilsandi"
+      ],
+      "retrieval_recall": 0.5,
+      "pred": "Canary Islands",
+      "em": 0.0,
+      "f1": 0.0,
+      "verifier_passes": {
+        "same": 1,
+        "cross": 1
+      },
+      "latency_ms": {
+        "ingest": 42.26,
+        "retrieval": 6.31,
+        "answer": 12063.29,
+        "total": 50087.08
+      }
+    },
+    {
+      "qid": "5ae7ef625542994a481bbe40",
+      "question": "What is the name of this suburb within the Central Coast Council local government area, where Tessa, of Microwave Jenny, grew up?",
+      "type": "bridge",
+      "gold_answer": "Umina Beach, New South Wales",
+      "gold_titles": [
+        "Umina Beach, New South Wales",
+        "Microwave Jenny"
+      ],
+      "retrieved_topk_titles": [
+        "Kulnura, New South Wales",
+        "Phegans Bay, New South Wales",
+        "Umina Beach, New South Wales",
+        "Woy Woy Bay, New South Wales"
+      ],
+      "retrieval_recall": 0.5,
+      "pred": "Kulnura",
+      "em": 0.0,
+      "f1": 0.0,
+      "verifier_passes": {
+        "same": 0,
+        "cross": 0
+      },
+      "latency_ms": {
+        "ingest": 32.94,
+        "retrieval": 7.62,
+        "answer": 12394.45,
+        "total": 20707.43
+      }
+    },
+    {
+      "qid": "5ab250b9554299722f9b4cd9",
+      "question": "The scientists who discovered Tedatioxetine were from what international pharmaceutical company?",
+      "type": "bridge",
+      "gold_answer": "Danish international pharmaceutical company",
+      "gold_titles": [
+        "Lundbeck",
+        "Tedatioxetine"
+      ],
+      "retrieved_topk_titles": [
+        "Tedatioxetine",
+        "Phospho-Energon",
+        "Behestan Darou",
+        "Chinese Pharmaceutical Association"
+      ],
+      "retrieval_recall": 0.5,
+      "pred": "Lundbeck",
+      "em": 0.0,
+      "f1": 0.0,
+      "verifier_passes": {
+        "same": 1,
+        "cross": 1
+      },
+      "latency_ms": {
+        "ingest": 39.22,
+        "retrieval": 6.42,
+        "answer": 2141.83,
+        "total": 10977.22
+      }
+    },
+    {
+      "qid": "5a83161555429940e5e1a958",
+      "question": "What age did a wrestler began his training at who began his friendship with Trevor Mann in Brookport, Illinois CPW?",
+      "type": "bridge",
+      "gold_answer": "15",
+      "gold_titles": [
+        "Chuck Taylor (wrestler)",
+        "Ricochet (wrestler)"
+      ],
+      "retrieved_topk_titles": [
+        "Chuck Taylor (wrestler)",
+        "Orrin L. Mann",
+        "Ricochet (wrestler)",
+        "Trevor Mann"
+      ],
+      "retrieval_recall": 1.0,
+      "pred": "15",
+      "em": 1.0,
+      "f1": 1.0,
+      "verifier_passes": {
+        "same": 0,
+        "cross": 0
+      },
+      "latency_ms": {
+        "ingest": 35.21,
+        "retrieval": 6.47,
+        "answer": 6802.52,
+        "total": 270074.24
+      }
+    },
+    {
+      "qid": "5ae76e615542997ec2727647",
+      "question": "Alternative facts is a phrase use by this U.S. Counselor to the President born in what year?",
+      "type": "bridge",
+      "gold_answer": "1967",
+      "gold_titles": [
+        "Alternative facts",
+        "Kellyanne Conway"
+      ],
+      "retrieved_topk_titles": [
+        "Alternative facts",
+        "Drug Facts for Young People",
+        "Mary N. Cook",
+        "Kellyanne Conway"
+      ],
+      "retrieval_recall": 1.0,
+      "pred": "1967",
+      "em": 1.0,
+      "f1": 1.0,
+      "verifier_passes": {
+        "same": 1,
+        "cross": 1
+      },
+      "latency_ms": {
+        "ingest": 36.05,
+        "retrieval": 6.86,
+        "answer": 5225.02,
+        "total": 9457.52
+      }
+    },
+    {
+      "qid": "5a7fc6645542992e7d278d6e",
+      "question": "What type of tours does the host of Tosh.0 conduct?",
+      "type": "bridge",
+      "gold_answer": "stand-up comedy",
+      "gold_titles": [
+        "Daniel Tosh",
+        "Tosh.0"
+      ],
+      "retrieved_topk_titles": [
+        "Daniel Tosh",
+        "Civic action program",
+        "1996 English cricket season",
+        "Jehovah's Witnesses and congregational discipline"
+      ],
+      "retrieval_recall": 0.5,
+      "pred": "stand-up comedy tours",
+      "em": 0.0,
+      "f1": 0.8,
+      "verifier_passes": {
+        "same": 1,
+        "cross": 1
+      },
+      "latency_ms": {
+        "ingest": 30.47,
+        "retrieval": 5.48,
+        "answer": 3142.54,
+        "total": 6514.08
+      }
+    },
+    {
+      "qid": "5a74e6e855429974ef308c8e",
+      "question": "What portable media player was distributed through HP?",
+      "type": "bridge",
+      "gold_answer": "iPod+HP",
+      "gold_titles": [
+        "IPod Classic",
+        "IPod+HP"
+      ],
+      "retrieved_topk_titles": [
+        "IPod+HP",
+        "Zvue",
+        "Portable media player",
+        "Cowon D2"
+      ],
+      "retrieval_recall": 0.5,
+      "pred": "Apple iPod+HP",
+      "em": 0.0,
+      "f1": 0.6667,
+      "verifier_passes": {
+        "same": 1,
+        "cross": 1
+      },
+      "latency_ms": {
+        "ingest": 29.94,
+        "retrieval": 5.54,
+        "answer": 1393.82,
+        "total": 14843.1
+      }
+    },
+    {
+      "qid": "5a8c2d23554299240d9c20b7",
+      "question": "Who directed the 2007 film which  Sasson Gabai won an Ophir Award for?",
+      "type": "bridge",
+      "gold_answer": "Eran Kolirin",
+      "gold_titles": [
+        "The Band's Visit",
+        "Sasson Gabai"
+      ],
+      "retrieved_topk_titles": [
+        "Sasson Gabai",
+        "Foxtrot (2017 film)",
+        "Yana's Friends",
+        "Joseph Cedar"
+      ],
+      "retrieval_recall": 0.5,
+      "pred": "",
+      "em": 0.0,
+      "f1": 0.0,
+      "verifier_passes": {
+        "same": 0,
+        "cross": 0
+      },
+      "latency_ms": {
+        "ingest": 30.47,
+        "retrieval": 6.65,
+        "answer": 41449.14,
+        "total": 41542.58
+      }
+    },
+    {
+      "qid": "5a762d53554299109176e6a7",
+      "question": "What was the the origin of the player that the Bull's traded with 76ers during the 1999-2000 midseason?",
+      "type": "bridge",
+      "gold_answer": "Croatian",
+      "gold_titles": [
+        "1999–2000 Chicago Bulls season",
+        "Toni Kukoč"
+      ],
+      "retrieved_topk_titles": [
+        "1999–2000 Chicago Bulls season",
+        "2000–01 Atlanta Hawks season",
+        "1999–2000 Philadelphia 76ers season",
+        "1997–98 Detroit Pistons season"
+      ],
+      "retrieval_recall": 0.5,
+      "pred": "",
+      "em": 0.0,
+      "f1": 0.0,
+      "verifier_passes": {
+        "same": 0,
+        "cross": 0
+      },
+      "latency_ms": {
+        "ingest": 38.31,
+        "retrieval": 6.19,
+        "answer": 12276.0,
+        "total": 12374.77
+      }
+    }
+  ]
+}
