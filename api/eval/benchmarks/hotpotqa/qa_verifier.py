@@ -9,6 +9,7 @@
 """
 from __future__ import annotations
 
+import re
 import string
 
 from app.core.llm.client import LLMClient
@@ -58,12 +59,13 @@ async def judge_qa(
     try:
         text = await client.chat(
             [{"role": "user", "content": prompt}],
-            max_tokens=4, temperature=0.0,
+            # 部分模型会先生成 reasoning_content；4 token 会把最终 1/0 截断。
+            max_tokens=128, temperature=0.0,
         )
     except Exception as e:  # noqa: BLE001
         logger.warning("QA verifier 调用失败,降级 0(不通过): %s", e)
         return 0
     text = (text or "").strip().strip(string.punctuation + " \"'")
-    if text.startswith("1"):
-        return 1
-    return 0
+    # 优先取最后一个独立 0/1，兼容未严格遵循“只输出单字符”的模型。
+    matches = re.findall(r"(?<!\d)[01](?!\d)", text)
+    return int(matches[-1]) if matches else 0

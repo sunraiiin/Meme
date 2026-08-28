@@ -38,6 +38,7 @@ K_RETRIEVE = 4  # 每题检索 top-4 段落给 chat 答（distractor 共 10 段�
 _NS_HOTPOT = uuid.UUID("eee30000-0000-0000-0000-0000000000c3")
 _CHECKPOINT_DIR = Path(__file__).parents[2] / "results" / "rag" / "checkpoints"
 _MAX_EMBED_CHARS = 2000
+_CHECKPOINT_PROTOCOL_VERSION = 2
 
 
 def _qid_to_uid(qid: str) -> str:
@@ -131,6 +132,7 @@ def _checkpoint_signature(
     chat_model: str, verifier_models: list[str],
 ) -> dict:
     return {
+        "protocol_version": _CHECKPOINT_PROTOCOL_VERSION,
         "sample": sample,
         "seed": seed,
         "verifier": verifier,
@@ -517,6 +519,17 @@ async def run_benchmark(
         )
         rejected = n_total - n_pass
         false_reject_rate = false_reject / rejected if rejected else 0.0
+        # EM 对别名/修饰词极严；F1>=0.5 作为“实质正确”的确定性近似口径。
+        substantial_leak = sum(
+            1 for vp, f1 in zip(pass_list, f1_list) if vp == 1 and f1 < 0.5
+        )
+        substantial_leak_rate = substantial_leak / n_pass if n_pass else 0.0
+        substantial_false_reject = sum(
+            1 for vp, f1 in zip(pass_list, f1_list) if vp == 0 and f1 >= 0.5
+        )
+        substantial_false_reject_rate = (
+            substantial_false_reject / rejected if rejected else 0.0
+        )
         # verifier 与 EM 一致率 = (二者同时为 1 或同时为 0) / total
         agree = sum(1 for vp, em in zip(pass_list, em_list) if vp == int(em))
         agree_rate = agree / n_total if n_total else 0.0
@@ -524,6 +537,10 @@ async def run_benchmark(
             "Verifier 判过率": round(n_pass / n_total, 4) if n_total else 0.0,
             "漏检率(judge 通过但 EM=0)": round(leak_rate, 4),
             "误拒率(judge 拒绝但 EM=1)": round(false_reject_rate, 4),
+            "实质错误放行率(F1<0.5)": round(substantial_leak_rate, 4),
+            "实质正确误拒率(F1>=0.5)": round(
+                substantial_false_reject_rate, 4
+            ),
             "与 EM 一致率": round(agree_rate, 4),
         }
 
@@ -533,6 +550,8 @@ async def run_benchmark(
                 "Verifier 判过率": "-",
                 "漏检率(judge 通过但 EM=0)": "-",
                 "误拒率(judge 拒绝但 EM=1)": "-",
+                "实质错误放行率(F1<0.5)": "-",
+                "实质正确误拒率(F1>=0.5)": "-",
                 "与 EM 一致率": "-",
             }
         )
@@ -585,6 +604,8 @@ async def run_benchmark(
         "cross = 跨 family verifier 模型;compare = 对同一答案同时运行二者。",
         "**漏检率**:Verifier 判过但实际 EM=0 的占比 —— 越低代表 Verifier 越可信。"
         "对比 same vs cross 的漏检率即「为什么不能 self-critique」的硬数据。",
+        "EM 会将别名/修饰词差异也计为错误；报告同时以 F1>=0.5 作为实质正确的"
+        "近似口径，两组都必须保留，不用 LLM judge 反过来自证正确。",
     ]
     report = write_benchmark_report(
         "hotpotqa", "HotpotQA distractor (L3)",

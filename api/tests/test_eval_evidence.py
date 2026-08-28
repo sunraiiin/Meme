@@ -8,6 +8,7 @@ from eval.benchmarks.hotpotqa.runner import (
     _load_checkpoint,
     _write_checkpoint,
 )
+from eval.benchmarks.hotpotqa.qa_verifier import judge_qa
 from eval.run_manifest import fixture_counts, fixtures_sha256
 from eval.stats import bootstrap_mean_ci, latency_summary, percentile
 from eval.tasks.identity import eval_identity
@@ -63,6 +64,23 @@ class EvalEvidenceTests(unittest.TestCase):
             restored = _load_checkpoint(path, signature)
 
         self.assertEqual([row["qid"] for row in restored], ["ok"])
+
+    def test_hotpot_verifier_allows_reasoning_before_final_digit(self):
+        class FakeClient:
+            async def chat(self, messages, max_tokens, temperature):
+                self.max_tokens = max_tokens
+                return "The evidence supports option 0 as a distractor.\n1"
+
+        client = FakeClient()
+        result = asyncio.run(judge_qa(
+            client,
+            question="Who?",
+            pred="Alice",
+            retrieved_passages=[("source", "Alice is the answer.")],
+        ))
+
+        self.assertEqual(result, 1)
+        self.assertGreaterEqual(client.max_tokens, 64)
 
 
 if __name__ == "__main__":
