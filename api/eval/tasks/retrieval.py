@@ -108,12 +108,16 @@ async def eval_rag(embed_client, rerank_client) -> tuple[dict, list]:
 
 async def eval_memory(embed_client) -> tuple[dict, list]:
     data = _load("memory_retrieval.json")
-    per_query: list[tuple[list, list]] = []
+    answer_pairs: list[tuple[list, list]] = []
+    context_pairs: list[tuple[list, list]] = []
     details: list[dict] = []
     latencies_ms: list[float] = []
     total = len(data)
     for i, item in enumerate(data, 1):
-        q, gold = item["question"], item.get("relevant_entities", [])
+        q = item["question"]
+        answer_gold = item.get("answer_entities", [])
+        context_gold = item.get("context_entities", [])
+        all_gold = answer_gold + context_gold
         print(f"    [记忆检索] {i}/{total} {q[:24]}…")
         started = time.perf_counter()
         hits = await search_memory(
@@ -121,12 +125,22 @@ async def eval_memory(embed_client) -> tuple[dict, list]:
         )
         latencies_ms.append((time.perf_counter() - started) * 1000)
         ranked_raw = [h.get("name") for h in hits if h.get("name")]
-        ranked = metrics.canonicalize(ranked_raw, gold)  # 归一化+包含口径，更完整的名算命中
-        per_query.append((ranked, gold))
-        d = _detail(q, gold, ranked)
+        ranked = metrics.canonicalize(ranked_raw, all_gold)
+        answer_ranked = metrics.canonicalize(ranked_raw, answer_gold)
+        context_ranked = metrics.canonicalize(ranked_raw, context_gold)
+        answer_pairs.append((answer_ranked, answer_gold))
+        context_pairs.append((context_ranked, context_gold))
+        d = _detail(q, answer_gold, answer_ranked)
+        d["answer_entities"] = answer_gold
+        d["context_entities"] = context_gold
+        d["context_retrieved_topk"] = context_ranked[:K]
+        d["all_gold_canonicalized_topk"] = ranked[:K]
         d["retrieved_raw_topk"] = ranked_raw[:K]  # 保留原始召回名便于排查
         details.append(d)
-    return {"图谱混合检索": _score(per_query, latencies_ms)}, details
+    return {
+        "答案实体召回(主指标)": _score(answer_pairs, latencies_ms),
+        "上下文实体覆盖(辅助指标)": _score(context_pairs, latencies_ms),
+    }, details
 
 
 def _rejection_score(rows: list[dict]) -> dict:

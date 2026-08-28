@@ -1,4 +1,5 @@
 import asyncio
+import json
 import tempfile
 import unittest
 from pathlib import Path
@@ -25,6 +26,20 @@ class EvalEvidenceTests(unittest.TestCase):
         self.assertEqual(counts["rag_negative"], 8)
         self.assertEqual(counts["memory_retrieval_negative"], 8)
         self.assertEqual(counts["memory_identity"], 9)
+
+        memory_fixture = json.loads(
+            (
+                Path(__file__).parents[1]
+                / "eval"
+                / "fixtures"
+                / "gold"
+                / "memory_retrieval.json"
+            ).read_text(encoding="utf-8")
+        )
+        self.assertTrue(all(row.get("answer_entities") for row in memory_fixture))
+        self.assertTrue(
+            all("用户" not in row["answer_entities"] for row in memory_fixture)
+        )
 
     def test_latency_and_bootstrap_statistics_are_deterministic(self):
         self.assertEqual(percentile([1, 2, 3, 4], 0.95), 4)
