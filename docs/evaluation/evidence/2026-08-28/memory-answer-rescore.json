@@ -1,0 +1,26 @@
+{
+  "name": "memory-answer-entity-rescore",
+  "generated_at": "2026-08-28",
+  "source_details": "l1-memory-legacy-details.json",
+  "source_commit": "b1d6ac2ad82c69c5149c8564927e34aa3fe302a1",
+  "method": "Reuse the stored top-5 rankings and score only the primary answer entity. Context entities such as the canonical self node are excluded from relevance labels.",
+  "sample_count": 19,
+  "metrics_at_5": {
+    "recall": 0.5789,
+    "precision": 0.1158,
+    "mrr": 0.2105,
+    "ndcg": 0.3028
+  },
+  "miss_count": 8,
+  "missed_answer_entities": [
+    "产品经理",
+    "团子",
+    "拿铁",
+    "王磊",
+    "成都（妹妹所在地）",
+    "复旦大学",
+    "成都（籍贯）",
+    "摄影"
+  ],
+  "caveat": "This is a post-hoc label correction over an immutable stored ranking, not a new model run. The legacy mixed-target score remains preserved for audit only."
+}

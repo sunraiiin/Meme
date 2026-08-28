@@ -97,6 +97,7 @@ async def run_benchmark(
     query_limit: int | None = None,
     skip_ingest: bool = False,
     keep_corpus: bool = False,
+    run_manifest: dict | None = None,
 ) -> tuple[dict, list]:
     """跑 C-MTEB T2Retrieval。
 
@@ -183,10 +184,18 @@ async def run_benchmark(
         "证明系统在公共基准上的相对水平。仅作系统设计对比，不作绝对水平断言。",
         "指标遵循 C-MTEB 官方协议（k=10）；source_id 用 corpus 原 cid。",
     ]
-    report = write_benchmark_report("cmteb-t2", "C-MTEB T2Retrieval (L2)",
-                                    table, meta=meta, extra_notes=notes,
-                                    category="rag")
-    detail_path = write_benchmark_details("cmteb-t2", details, category="rag")
+    report = write_benchmark_report(
+        "cmteb-t2",
+        "C-MTEB T2Retrieval (L2)",
+        table,
+        meta=meta,
+        extra_notes=notes,
+        category="rag",
+        manifest=run_manifest,
+    )
+    detail_path = write_benchmark_details(
+        "cmteb-t2", details, category="rag", manifest=run_manifest
+    )
     print(f"  报告: {report}\n  明细: {detail_path}")
 
     if not keep_corpus:

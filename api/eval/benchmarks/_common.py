@@ -42,6 +42,7 @@ def write_benchmark_report(
     benchmark: str, title: str, table: dict, meta: dict | None = None,
     extra_notes: list[str] | None = None,
     category: str | None = None,
+    manifest: dict | None = None,
 ) -> Path:
     """单 benchmark 报告 Markdown:标题 + 元信息 + 指标表 + 备注。
 
@@ -55,6 +56,23 @@ def write_benchmark_report(
         lines.append("**评测元信息**")
         for k, v in meta.items():
             lines.append(f"- {k}: {v}")
+        lines.append("")
+    if manifest:
+        lines.append("**运行证据**")
+        lines.append(f"- Git commit: `{manifest.get('git_commit')}`")
+        lines.append(f"- 工作区包含未提交改动: {manifest.get('git_dirty')}")
+        lines.append(f"- 夹具 SHA-256: `{manifest.get('fixture_sha256')}`")
+        lines.append(f"- 模型来源: {manifest.get('model_source')}")
+        lines.append(
+            "- 模型: `"
+            + json.dumps(manifest.get("models", {}), ensure_ascii=False)
+            + "`"
+        )
+        lines.append(
+            "- 参数: `"
+            + json.dumps(manifest.get("parameters", {}), ensure_ascii=False)
+            + "`"
+        )
         lines.append("")
     if extra_notes:
         for n in extra_notes:
@@ -75,11 +93,15 @@ def write_benchmark_report(
 
 
 def write_benchmark_details(
-    benchmark: str, details: list, category: str | None = None,
+    benchmark: str,
+    details: list,
+    category: str | None = None,
+    manifest: dict | None = None,
 ) -> Path:
     """单 benchmark 明细 JSON,与报告同目录。"""
     path = _category_dir(category) / f"details-{benchmark}-{ts()}.json"
-    path.write_text(json.dumps(details, ensure_ascii=False, indent=2), encoding="utf-8")
+    body = {"manifest": manifest or {}, "results": details}
+    path.write_text(json.dumps(body, ensure_ascii=False, indent=2), encoding="utf-8")
     return path
 
 

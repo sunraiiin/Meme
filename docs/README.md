@@ -13,6 +13,8 @@
 - [核心演示流程回归清单](testing/CORE-DEMO-FLOW.md)
 - [核心演示流程回归结果（2026-08-25）](testing/CORE-DEMO-FLOW-RESULT-2026-08-25.md)
 - [核心模块讲解与面试指南](modules/README.md)
+- [离线评测体系与面试讲解](modules/EVALUATION.md)
+- [2026-08-28 可复核评测证据](evaluation/evidence/2026-08-28/README.md)
 - [代码来源说明](SOURCE-NOTICE.md)
 
 ## 决策状态

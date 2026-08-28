@@ -22,18 +22,23 @@
 """
 import argparse
 import asyncio
+import uuid
 
 from app.config import settings
 
 from eval import clients, eval_config, reporters
 from eval.pipeline.setup import setup_all
 from eval.pipeline.teardown import teardown
+from eval.run_manifest import build_manifest
 from eval.tasks import dedup as t_dedup
 from eval.tasks import extraction as t_extraction
+from eval.tasks import identity as t_identity
 from eval.tasks import retrieval as t_retrieval
 
 
-async def _check_models(embed, chat, rerank, need_chat: bool = True):
+async def _check_models(
+    embed, chat, rerank, need_chat: bool = True, need_embedding: bool = True
+):
     """跑评测前先确认模型真的能调通,避免灌了一半数据才发现 key/url 错。
 
     embedding 必须可用(不通直接中止);chat 视任务需要(默认必需);
@@ -43,17 +48,20 @@ async def _check_models(embed, chat, rerank, need_chat: bool = True):
     print("[check] 模型可用性自检…")
 
     # embedding(必需)—— 顺带校验维度是否与 ES 索引一致
-    try:
-        v = await embed.embed_one("评测连通性测试")
-    except Exception as e:
-        raise RuntimeError(f"embedding 模型不可用({embed.model_name}):{e}") from e
-    dim = len(v)
-    note = ""
-    if dim != settings.embedding_dims:
-        note = f"  ⚠ 维度 {dim} 与 ES 索引维度 {settings.embedding_dims} 不一致,检索会失败!请改 .env.eval 的 embedding 模型或 EMBEDDING_DIMS"
-    print(f"  ✓ embedding 可用({embed.model_name},维度 {dim})")
-    if note:
-        print(note)
+    if need_embedding:
+        try:
+            v = await embed.embed_one("评测连通性测试")
+        except Exception as e:
+            raise RuntimeError(f"embedding 模型不可用({embed.model_name}):{e}") from e
+        dim = len(v)
+        note = ""
+        if dim != settings.embedding_dims:
+            note = f"  ⚠ 维度 {dim} 与 ES 索引维度 {settings.embedding_dims} 不一致,检索会失败!请改 .env.eval 的 embedding 模型或 EMBEDDING_DIMS"
+        print(f"  ✓ embedding 可用({embed.model_name},维度 {dim})")
+        if note:
+            print(note)
+    else:
+        print("  - 当前 benchmark 为 BM25 对照，跳过 embedding 自检")
 
     # chat
     if need_chat:
@@ -78,7 +86,7 @@ async def _check_models(embed, chat, rerank, need_chat: bool = True):
         return None
 
 
-async def _run_fixtures(args, embed, chat, rerank) -> None:
+async def _run_fixtures(args, embed, chat, rerank, manifest: dict) -> None:
     """① 自制集评测流程(原 L1)。"""
     only = args.only
     setup_stats = None
@@ -100,20 +108,31 @@ async def _run_fixtures(args, embed, chat, rerank) -> None:
     if only in (None, "retrieval"):
         print("[eval] RAG 检索…")
         results["RAG 检索"], details["RAG 检索"] = await t_retrieval.eval_rag(embed, rerank)
+        print("[eval] RAG 无相关资料拒绝…")
+        results["RAG 负样本"], details["RAG 负样本"] = (
+            await t_retrieval.eval_rag_negative(embed)
+        )
     if only in (None, "memory"):
         print("[eval] 记忆检索…")
         results["记忆检索"], details["记忆检索"] = await t_retrieval.eval_memory(embed)
+        print("[eval] 记忆缺失事实拒绝…")
+        results["记忆负样本"], details["记忆负样本"] = (
+            await t_retrieval.eval_memory_negative(embed)
+        )
     if only in (None, "extraction"):
         print("[eval] 三元组抽取…")
         results["三元组抽取"], details["三元组抽取"] = await t_extraction.eval_extraction(chat)
     if only in (None, "dedup"):
         print("[eval] 实体去重…")
         results["实体去重"], details["实体去重"] = await t_dedup.eval_dedup(chat, embed)
+    if only in (None, "identity"):
+        print("[eval] 本人身份归一化安全层…")
+        results["身份归一化"], details["身份归一化"] = await t_identity.eval_identity()
 
     # 3. 输出
     reporters.print_summary(results)
-    rpt = reporters.write_report(results, setup_stats)
-    det = reporters.write_details(details)
+    rpt = reporters.write_report(results, setup_stats, manifest)
+    det = reporters.write_details(details, manifest)
     print(f"\n报告:{rpt}\n明细:{det}")
 
     # 4. 可选清理
@@ -122,7 +141,9 @@ async def _run_fixtures(args, embed, chat, rerank) -> None:
         await teardown()
 
 
-async def _run_benchmark(args, embed, chat, rerank) -> None:
+async def _run_benchmark(
+    args, embed, chat, rerank, verifier_client, manifest: dict
+) -> None:
     """①.5 公共评测基准入口。"""
     name = args.benchmark
     targets = ["cmteb-t2", "hotpotqa"] if name == "all" else [name]
@@ -136,6 +157,7 @@ async def _run_benchmark(args, embed, chat, rerank) -> None:
                 query_limit=args.query_limit,
                 skip_ingest=args.skip_setup,
                 keep_corpus=args.keep_corpus,
+                run_manifest=manifest,
             )
         elif bm == "hotpotqa":
             from eval.benchmarks.hotpotqa import run_benchmark
@@ -144,42 +166,82 @@ async def _run_benchmark(args, embed, chat, rerank) -> None:
                 sample=args.sample,
                 verifier=args.verifier,
                 seed=args.seed,
-                verifier_client_factory=eval_config.verifier_client,
+                resume=args.resume,
+                retrieval_mode=args.hotpot_retrieval,
+                verifier_client_factory=lambda: verifier_client,
+                run_manifest=manifest,
             )
         else:
             print(f"  未知 benchmark: {bm}")
 
 
 async def _run(args) -> None:
-    embed = eval_config.embed_client()
-    chat = eval_config.chat_client()
-    rerank = eval_config.rerank_client()
+    need_chat = not (args.benchmark == "cmteb-t2")
+    need_embedding = not (
+        args.benchmark == "hotpotqa" and args.hotpot_retrieval == "bm25"
+    )
+    bundle = await eval_config.build_clients(
+        model_user_id=args.model_user_id,
+        need_chat=need_chat,
+    )
+    embed = bundle.embed
+    chat = bundle.chat
+    rerank = bundle.rerank
+    manifest = build_manifest(
+        model_source=bundle.source,
+        embed_model=embed.model_name,
+        chat_model=chat.model_name if chat else None,
+        rerank_model=rerank.model_name if rerank else None,
+        verifier_model=bundle.verifier.model_name if bundle.verifier else None,
+        arguments=vars(args),
+    )
 
     # 0. 模型可用性自检(除非 --skip-check)
     if not args.skip_check:
         # cmteb-t2 不强需 chat;其他都要
-        need_chat = not (args.benchmark == "cmteb-t2")
-        rerank = await _check_models(embed, chat, rerank, need_chat=need_chat)
+        rerank = await _check_models(
+            embed,
+            chat,
+            rerank,
+            need_chat=need_chat,
+            need_embedding=need_embedding,
+        )
 
     try:
         if args.benchmark:
-            await _run_benchmark(args, embed, chat, rerank)
+            await _run_benchmark(
+                args, embed, chat, rerank, bundle.verifier, manifest
+            )
         else:
-            await _run_fixtures(args, embed, chat, rerank)
+            await _run_fixtures(args, embed, chat, rerank, manifest)
     finally:
         await clients.close_clients()
+        from app.core.llm.client import close_llm_client
+        from app.db.postgres import close as close_postgres
+
+        await close_llm_client()
+        await close_postgres()
 
 
 def main() -> None:
-    p = argparse.ArgumentParser(description="Comet 离线评测(RAG + 记忆,L1 自制集 + L2/L3 公共基准)")
+    p = argparse.ArgumentParser(
+        description="Meme 离线评测(RAG + 记忆,L1 自制集 + L2/L3 公共基准)"
+    )
     # 通用
     p.add_argument("--skip-check", action="store_true", help="跳过模型可用性自检")
+    p.add_argument(
+        "--model-user-id",
+        type=uuid.UUID,
+        help="本地复用该用户的加密模型配置；只读配置，不读取业务数据，也不写入报告",
+    )
 
     # L1 自制集开关
     p.add_argument("--skip-setup", action="store_true", help="跳过写入,直接评测")
     p.add_argument("--reset", action="store_true", help="setup 前先清空旧评测数据(推荐重跑时用)")
     p.add_argument("--teardown", action="store_true", help="跑完清理评测数据")
-    p.add_argument("--only", choices=["retrieval", "memory", "extraction", "dedup"],
+    p.add_argument(
+        "--only",
+        choices=["retrieval", "memory", "extraction", "dedup", "identity"],
                    help="只跑某一项(L1)")
 
     # ①.5 公共基准开关
@@ -198,9 +260,23 @@ def main() -> None:
     # hotpotqa 控制
     p.add_argument("--sample", type=int, default=100,
                    help="[hotpotqa] 采样题数（默认 100，分层 bridge/comparison；全量 dev 约 7400 题极重）")
-    p.add_argument("--verifier", choices=["none", "same", "cross"], default="none",
+    p.add_argument(
+        "--hotpot-retrieval",
+        choices=["hybrid", "bm25"],
+        default="hybrid",
+        help="[hotpotqa] 检索模式；BM25 可作为不依赖 embedding 的消融对照",
+    )
+    p.add_argument(
+        "--verifier",
+        choices=["none", "same", "cross", "compare"],
+        default="none",
                    help="[hotpotqa] Verifier 配置（等 ② Verifier Loop 完成后启用）")
     p.add_argument("--seed", type=int, default=42, help="[hotpotqa] 采样种子")
+    p.add_argument(
+        "--resume",
+        action="store_true",
+        help="[hotpotqa] 从同参数 checkpoint 续跑（每题完成后增量保存）",
+    )
 
     asyncio.run(_run(p.parse_args()))
 

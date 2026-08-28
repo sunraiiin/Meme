@@ -1,0 +1,232 @@
+{
+  "manifest": {
+    "generated_at_utc": "2026-08-27T12:54:52.912645+00:00",
+    "git_commit": "b1d6ac2ad82c69c5149c8564927e34aa3fe302a1",
+    "git_dirty": false,
+    "fixture_sha256": "b7e83ccaae73220467866fe74407ef341199ca7cb589f06ad9ab074d5970ddd2",
+    "fixture_counts": {
+      "dedup": 3,
+      "extraction": 10,
+      "memory_identity": 9,
+      "memory_retrieval": 19,
+      "memory_retrieval_negative": 8,
+      "rag_negative": 8,
+      "retrieval": 22,
+      "corpus_documents": 10,
+      "dialogues": 17
+    },
+    "model_source": "encrypted-app-config",
+    "models": {
+      "embedding": "qwen3.7-text-embedding",
+      "chat": "glm-4.6v",
+      "rerank": "(not configured)",
+      "verifier": "qwen3.8-max"
+    },
+    "parameters": {
+      "embedding_dimensions": 1024,
+      "skip_check": true,
+      "skip_setup": true,
+      "only": "identity",
+      "corpus_limit": 1000,
+      "query_limit": 100,
+      "sample": 100,
+      "verifier": "none",
+      "seed": 42
+    }
+  },
+  "results": {
+    "身份归一化": [
+      {
+        "id": "self-name",
+        "scenario": "self_name",
+        "passed": true,
+        "assertions": {
+          "has_canonical_self": true,
+          "display_name": true
+        },
+        "self": {
+          "id": "self:eee00000-0000-0000-0000-0000000000ee",
+          "name": "林夕",
+          "aliases": [
+            "我",
+            "我本人",
+            "本人",
+            "用户",
+            "自己"
+          ]
+        },
+        "redirected_names": [
+          "我",
+          "林夕"
+        ]
+      },
+      {
+        "id": "explicit-self-link",
+        "scenario": "explicit_self_link",
+        "passed": true,
+        "assertions": {
+          "has_canonical_self": true
+        },
+        "self": {
+          "id": "self:eee00000-0000-0000-0000-0000000000ee",
+          "name": "林夕",
+          "aliases": [
+            "我",
+            "我本人",
+            "本人",
+            "用户",
+            "自己"
+          ]
+        },
+        "redirected_names": [
+          "林夕"
+        ]
+      },
+      {
+        "id": "self-fact",
+        "scenario": "self_fact",
+        "passed": true,
+        "assertions": {
+          "has_canonical_self": true
+        },
+        "self": {
+          "id": "self:eee00000-0000-0000-0000-0000000000ee",
+          "name": "林夕",
+          "aliases": [
+            "我",
+            "我本人",
+            "本人",
+            "用户",
+            "自己"
+          ]
+        },
+        "redirected_names": [
+          "我"
+        ]
+      },
+      {
+        "id": "self-alias",
+        "scenario": "self_alias",
+        "passed": true,
+        "assertions": {
+          "has_canonical_self": true,
+          "alias_added": true
+        },
+        "self": {
+          "id": "self:eee00000-0000-0000-0000-0000000000ee",
+          "name": "林夕",
+          "aliases": [
+            "小夕",
+            "我",
+            "我本人",
+            "本人",
+            "用户",
+            "自己"
+          ]
+        },
+        "redirected_names": [
+          "小夕",
+          "我"
+        ]
+      },
+      {
+        "id": "roleplay-name",
+        "scenario": "roleplay_or_quoted_name",
+        "passed": true,
+        "assertions": {
+          "external_entity_not_linked": true
+        },
+        "self": null,
+        "redirected_names": []
+      },
+      {
+        "id": "colleague-same-name",
+        "scenario": "third_person_same_name",
+        "passed": true,
+        "assertions": {
+          "external_entity_not_linked": true
+        },
+        "self": null,
+        "redirected_names": []
+      },
+      {
+        "id": "rename",
+        "scenario": "name_change",
+        "passed": true,
+        "assertions": {
+          "has_canonical_self": true,
+          "display_name": true,
+          "historical_alias_kept": true
+        },
+        "self": {
+          "id": "self:eee00000-0000-0000-0000-0000000000ee",
+          "name": "林舟",
+          "aliases": [
+            "小夕",
+            "我",
+            "我本人",
+            "本人",
+            "林夕",
+            "用户",
+            "自己"
+          ]
+        },
+        "redirected_names": [
+          "我",
+          "林夕",
+          "林舟"
+        ]
+      },
+      {
+        "id": "negation",
+        "scenario": "negated_identity",
+        "passed": true,
+        "assertions": {
+          "has_canonical_self": true,
+          "invalid_alias_removed": true
+        },
+        "self": {
+          "id": "self:eee00000-0000-0000-0000-0000000000ee",
+          "name": "林舟",
+          "aliases": [
+            "小夕",
+            "我",
+            "我本人",
+            "本人",
+            "用户",
+            "自己"
+          ]
+        },
+        "redirected_names": [
+          "我"
+        ]
+      },
+      {
+        "id": "duplicate-input",
+        "scenario": "idempotent_replay",
+        "passed": true,
+        "assertions": {
+          "has_canonical_self": true,
+          "single_stable_self": true
+        },
+        "self": {
+          "id": "self:eee00000-0000-0000-0000-0000000000ee",
+          "name": "林夕",
+          "aliases": [
+            "小夕",
+            "我",
+            "我本人",
+            "本人",
+            "林舟",
+            "用户",
+            "自己"
+          ]
+        },
+        "redirected_names": [
+          "我",
+          "林夕"
+        ]
+      }
+    ]
+  }
+}
